@@ -3,541 +3,437 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ระบบขอคืนเงิน / Refund System</title>
-    
-    <!-- Tailwind CSS -->
+    <title>ระบบขอคืนเงิน</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-    <!-- PDF & Canvas Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
-        body { font-family: 'Kanit', sans-serif; background-color: #f3f4f6; -webkit-touch-callout: none; user-select: none; }
-        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-        .tab-btn.active { border-bottom: 3px solid #3b82f6; color: #3b82f6; font-weight: 600; }
-        .step-container { display: none; animation: fadeIn 0.3s ease-in-out; }
-        .step-container.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        body { font-family: 'Prompt', sans-serif; background-color: #f3f4f6; overscroll-behavior-y: none; -webkit-user-select: none; user-select: none; }
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .step-active { border-color: #3b82f6; color: #3b82f6; background-color: #eff6ff; }
+        .step-inactive { border-color: #d1d5db; color: #9ca3af; }
         
-        /* Error Guard Screen */
-        #guard-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #ffffff; z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        /* Modal & Loader styles */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 50; justify-content: center; align-items: center; padding: 20px; }
+        .modal.active { display: flex; animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* Custom Input */
-        .input-field { width: 100%; padding: 12px 15px; margin-top: 5px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 16px; background-color: #f9fafb; transition: all 0.3s; }
-        .input-field:focus { outline: none; border-color: #3b82f6; background-color: #fff; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-        label { font-size: 14px; font-weight: 500; color: #4b5563; margin-top: 15px; display: block; }
-
-        .a4-document { width: 210mm; min-height: 297mm; padding: 20mm; margin: 0 auto; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        @media (max-width: 768px) { .a4-document { width: 100%; padding: 15px; min-height: auto; } }
-
-        /* Custom Modal */
-        .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 5000; backdrop-filter: blur(3px); }
-        .modal-content { background: white; padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.2); animation: fadeIn 0.2s; }
     </style>
+
+    <script>
+        // ป้องกันคลิกขวาและ F12 ขั้นเด็ดขาด
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.onkeydown = e => { if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74))) return false; };
+
+        // ตรวจสอบอุปกรณ์ (iOS >= 18, Android) และต้องเปิดใน LINE เท่านั้น
+        (function() {
+            const ua = navigator.userAgent;
+            const isLINE = /Line/i.test(ua);
+            let isAllowedOS = false;
+
+            if (/android/i.test(ua)) {
+                isAllowedOS = true;
+            } else if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) {
+                const match = ua.match(/OS (\d+)_/);
+                if (match && parseInt(match[1], 10) >= 18) isAllowedOS = true;
+            }
+
+            // By-pass ชั่วคราวสำหรับการพรีวิวบนเว็บไซต์ (เพื่อไม่ให้จอขาวในระบบจำลอง)
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '';
+            
+            if (!isLocal && (!isLINE || !isAllowedOS)) {
+                document.write(`
+                    <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <style>body{margin:0;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;text-align:center;background:#fff;} h2{color:#ff3b30; font-size:18px; padding:0 20px;} p{font-size:14px; color:#666;}</style>
+                    </head><body><h2>กรุณาใช้ช่องทางไลน์ในการใช้งานเว็ปไซต์ เท่านั้น CFR03</h2><p>กรุณารอสักครู่ ระบบกำลังพาเข้าสู่ไลน์บริการ ในอีก <span id="sec">5</span> วินาที</p>
+                    <script>let c = 5; setInterval(() => { c--; document.getElementById('sec').innerText = c; if(c<=0) location.href="https://line.me/R/ti/p/@jpo3470r"; }, 1000);<\/script></body></html>
+                `);
+                document.close();
+                window.stop();
+            }
+        })();
+    </script>
 </head>
 <body class="text-gray-800">
 
-    <div id="guard-screen">
-        <div class="loader"></div>
-        <h2 class="text-xl font-bold text-gray-800 mb-2">CFR03</h2>
-        <p class="text-gray-600 mb-4">กรุณารอสักครู่ ระบบกำลังพาเข้าสู่ไลน์บริการ ในอีก <span id="countdown" class="font-bold text-blue-600">5</span> วินาที</p>
-        <p class="text-sm text-red-500 max-w-xs">กรุณาใช้ช่องทาง LINE บนสมาร์ทโฟนระบบปฏิบัติการ iOS 18 ขึ้นไป หรือ Android รุ่นปัจจุบัน ในการใช้งานเว็บไซต์เท่านั้น</p>
-    </div>
-
-    <div id="app-content" style="display: none; max-width: 800px; margin: 0 auto; padding-bottom: 50px;">
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative pb-20">
         <!-- Header -->
-        <div class="bg-blue-600 text-white p-5 shadow-lg rounded-b-3xl">
-            <h1 class="text-2xl font-bold text-center">ศูนย์บริการช่วยเหลือ</h1>
-            <p class="text-center text-blue-100 text-sm">ระบบจัดการคำขอคืนเงินอัตโนมัติ</p>
+        <div class="bg-blue-600 text-white p-5 rounded-b-3xl shadow-md">
+            <h1 class="text-xl font-bold text-center">ระบบแบบฟอร์มขอคืนเงิน</h1>
+            <p class="text-sm text-center opacity-80 mt-1">บริษัท สงวนสิทธิ์การให้บริการที่โปร่งใส</p>
         </div>
 
-        <!-- Navigation Tabs -->
-        <div class="flex justify-between bg-white mt-4 mx-4 rounded-xl shadow-sm p-1">
-            <button class="tab-btn active flex-1 py-3 text-sm text-gray-500 rounded-lg transition" onclick="switchTab('tab-form', this)">📝 แบบฟอร์มคืนเงิน</button>
-            <button class="tab-btn flex-1 py-3 text-sm text-gray-500 rounded-lg transition" onclick="switchTab('tab-status', this)">🔍 ตรวจสอบสถานะ</button>
-            <button class="tab-btn flex-1 py-3 text-sm text-gray-500 rounded-lg transition" onclick="switchTab('tab-policy', this)">📜 ระเบียบ/เงื่อนไข</button>
+        <!-- Tabs -->
+        <div class="flex justify-around bg-white p-3 shadow-sm sticky top-0 z-10 border-b">
+            <button onclick="switchTab('tab-form')" id="btn-form" class="tab-btn text-blue-600 font-semibold border-b-2 border-blue-600 px-2 pb-1 text-sm">แบบฟอร์ม</button>
+            <button onclick="switchTab('tab-status')" id="btn-status" class="tab-btn text-gray-500 font-medium px-2 pb-1 text-sm">ตรวจสอบสถานะ</button>
+            <button onclick="switchTab('tab-policy')" id="btn-policy" class="tab-btn text-gray-500 font-medium px-2 pb-1 text-sm">เงื่อนไข (PDF)</button>
         </div>
 
-        <!-- Tab 1: Form -->
-        <div id="tab-form" class="mx-4 mt-6">
-            <div class="glass-panel p-6 rounded-2xl">
-                <!-- Progress Bar -->
-                <div class="flex justify-between items-center mb-6 relative">
-                    <div class="absolute w-full h-1 bg-gray-200 top-1/2 -z-10 rounded"></div>
-                    <div id="progress-line" class="absolute w-0 h-1 bg-blue-500 top-1/2 -z-10 rounded transition-all duration-300"></div>
-                    
-                    <div class="flex flex-col items-center">
-                        <div id="step1-icon" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">1</div>
-                        <span class="text-xs mt-1 text-gray-500 font-medium">ส่วนตัว</span>
+        <!-- TAB 1: FORM -->
+        <div id="tab-form" class="p-5 tab-content block">
+            <!-- Progress Steps -->
+            <div class="flex justify-between items-center mb-6 px-4">
+                <div id="step-1-dot" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 step-active">1</div>
+                <div class="flex-1 h-1 bg-gray-200 mx-2"><div id="progress-line-1" class="h-1 bg-blue-500 w-0 transition-all"></div></div>
+                <div id="step-2-dot" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 step-inactive">2</div>
+                <div class="flex-1 h-1 bg-gray-200 mx-2"><div id="progress-line-2" class="h-1 bg-blue-500 w-0 transition-all"></div></div>
+                <div id="step-3-dot" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 step-inactive">3</div>
+            </div>
+
+            <!-- Step 1: Personal Info -->
+            <div id="step-1-content" class="animate-[fadeIn_0.3s]">
+                <h2 class="text-lg font-bold mb-4">ข้อมูลส่วนตัว</h2>
+                <div class="space-y-4">
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">Username (รหัสผู้ใช้)</label><input type="text" id="f_username" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Username ของท่าน"></div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">อีเมล (Email)</label><input type="email" id="f_email" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="example@email.com"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อ</label><input type="text" id="f_fname" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="ชื่อจริง"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">นามสกุล</label><input type="text" id="f_lname" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="นามสกุล"></div>
                     </div>
-                    <div class="flex flex-col items-center">
-                        <div id="step2-icon" class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">2</div>
-                        <span class="text-xs mt-1 text-gray-500 font-medium">บัญชี</span>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <div id="step3-icon" class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">3</div>
-                        <span class="text-xs mt-1 text-gray-500 font-medium">เสร็จสิ้น</span>
-                    </div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">เบอร์โทรศัพท์ (10 หลัก)</label><input type="tel" id="f_phone" maxlength="10" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="08xxxxxxxx"></div>
+                    <button onclick="nextStep(2)" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-4 shadow-md active:scale-95 transition-transform">ถัดไป</button>
                 </div>
+            </div>
 
-                <form id="refundForm">
-                    <!-- Step 1: Personal Info -->
-                    <div id="step1" class="step-container active">
-                        <h2 class="text-lg font-bold text-gray-800 border-b pb-2 mb-4">ข้อมูลส่วนตัว / Personal Info</h2>
-                        <label>Username (บัญชีผู้ใช้)</label>
-                        <input type="text" id="f_username" class="input-field" required placeholder="ระบุ Username ของคุณ">
-                        <label>อีเมล (Email)</label>
-                        <input type="email" id="f_email" class="input-field" required placeholder="example@email.com">
-                        <label>ชื่อ (Name)</label>
-                        <input type="text" id="f_name" class="input-field" required placeholder="ชื่อจริง">
-                        <label>นามสกุล (Surname)</label>
-                        <input type="text" id="f_surname" class="input-field" required placeholder="นามสกุลจริง">
-                        <label>เบอร์โทรศัพท์ (Phone Number)</label>
-                        <input type="tel" id="f_phone" class="input-field" required placeholder="08xxxxxxxx" maxlength="10">
-                        <label>แนบสำเนาบัตรประชาชน (ระบุ URL ภาพ หรือเลือกไฟล์)</label>
-                        <input type="file" id="f_idcard" class="input-field text-sm" accept="image/*">
-                        
-                        <button type="button" onclick="nextStep(2)" class="w-full mt-6 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition">ถัดไป</button>
-                    </div>
-
-                    <!-- Step 2: Bank Info -->
-                    <div id="step2" class="step-container">
-                        <h2 class="text-lg font-bold text-gray-800 border-b pb-2 mb-4">ข้อมูลบัญชี / Bank Info</h2>
-                        <label>ธนาคาร (Bank Name)</label>
-                        <select id="f_bank" class="input-field" required>
-                            <option value="">เลือกธนาคาร</option>
-                            <option value="KBank">กสิกรไทย</option>
-                            <option value="SCB">ไทยพาณิชย์</option>
-                            <option value="BBL">กรุงเทพ</option>
-                            <option value="KTB">กรุงไทย</option>
-                            <option value="BAY">กรุงศรีอยุธยา</option>
-                            <option value="TrueMoney">TrueMoney Wallet</option>
-                            <option value="Other">อื่นๆ</option>
+            <!-- Step 2: Bank Info -->
+            <div id="step-2-content" class="hidden animate-[fadeIn_0.3s]">
+                <h2 class="text-lg font-bold mb-4">ข้อมูลบัญชีและหลักฐาน</h2>
+                <div class="space-y-4">
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">ธนาคาร</label>
+                        <select id="f_bank" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                            <option value="">-- เลือกธนาคาร --</option>
+                            <option value="KBank">กสิกรไทย</option><option value="SCB">ไทยพาณิชย์</option>
+                            <option value="KTB">กรุงไทย</option><option value="BBL">กรุงเทพ</option>
+                            <option value="BAY">กรุงศรีอยุธยา</option><option value="TTB">ทหารไทยธนชาต</option>
+                            <option value="GSB">ออมสิน</option><option value="BAAC">ธ.ก.ส.</option>
                         </select>
-                        <label>เลขที่บัญชี (Account Number)</label>
-                        <input type="text" id="f_acc_num" class="input-field" required placeholder="ระบุเลขบัญชี 10-12 หลัก">
-                        <label>จำนวนเงินที่ขอคืน (Amount)</label>
-                        <input type="number" id="f_amount" class="input-field" required placeholder="0.00">
-                        <label>แนบสำเนาหน้าสมุดบัญชี (Bank Book)</label>
-                        <input type="file" id="f_bankbook" class="input-field text-sm" accept="image/*">
-                        
-                        <div class="flex gap-3 mt-6">
-                            <button type="button" onclick="prevStep(1)" class="w-1/3 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition">กลับ</button>
-                            <button type="button" onclick="submitForm()" class="w-2/3 bg-green-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-green-500/30 hover:bg-green-600 transition">ยืนยันข้อมูล</button>
-                        </div>
+                    </div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">เลขที่บัญชี (ที่ต้องการรับเงิน)</label><input type="text" id="f_acc" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="ระบุเลขบัญชี"></div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">จำนวนเงินที่ขอคืน</label><input type="number" id="f_amt" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0.00"></div>
+                    
+                    <div class="p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">อัปโหลด สำเนาบัตรประชาชน</label>
+                        <input type="file" id="f_idcard" accept="image/*" class="w-full text-sm mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200">
+                    </div>
+                    <div class="p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">อัปโหลด สำเนาหน้าสมุดบัญชี</label>
+                        <input type="file" id="f_bankbook" accept="image/*" class="w-full text-sm mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200">
                     </div>
 
-                    <!-- Step 3: Success -->
-                    <div id="step3" class="step-container text-center py-8">
-                        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        </div>
-                        <h2 class="text-2xl font-bold text-gray-800">ส่งคำขอสำเร็จ!</h2>
-                        <p class="text-gray-500 mt-2">หมายเลขรายการของคุณคือ</p>
-                        <div id="show_tk" class="text-xl font-mono text-blue-600 font-bold my-3 bg-blue-50 py-2 rounded-lg inline-block px-6">TKXXXXXX</div>
-                        <p class="text-sm text-gray-400 mt-4">กรุณาแคปหน้าจอนี้ไว้เป็นหลักฐาน<br>ระยะเวลาดำเนินการ 1-72 ชั่วโมง</p>
-                        <button type="button" onclick="resetForm()" class="mt-8 bg-blue-100 text-blue-600 px-6 py-2 rounded-full font-medium hover:bg-blue-200 transition">ทำรายการใหม่</button>
+                    <div class="flex gap-3 mt-4">
+                        <button onclick="nextStep(1)" class="w-1/3 bg-gray-200 text-gray-700 font-bold py-3 rounded-lg active:scale-95 transition-transform">ย้อนกลับ</button>
+                        <button onclick="nextStep(3)" class="w-2/3 bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md active:scale-95 transition-transform">ตรวจสอบข้อมูล</button>
                     </div>
-                </form>
+                </div>
+            </div>
+
+            <!-- Step 3: Confirmation -->
+            <div id="step-3-content" class="hidden animate-[fadeIn_0.3s]">
+                <h2 class="text-lg font-bold mb-4 text-center">ยืนยันการส่งข้อมูล</h2>
+                <div class="bg-gray-50 border p-4 rounded-xl text-sm space-y-2 mb-5">
+                    <p><span class="font-semibold text-gray-600">Username:</span> <span id="c_user"></span></p>
+                    <p><span class="font-semibold text-gray-600">ชื่อ-สกุล:</span> <span id="c_name"></span></p>
+                    <p><span class="font-semibold text-gray-600">เบอร์โทรศัพท์:</span> <span id="c_phone"></span></p>
+                    <hr>
+                    <p><span class="font-semibold text-gray-600">ธนาคาร:</span> <span id="c_bank"></span></p>
+                    <p><span class="font-semibold text-gray-600">เลขบัญชี:</span> <span id="c_acc"></span></p>
+                    <p><span class="font-semibold text-gray-600">ยอดขอคืน:</span> <span id="c_amt" class="text-red-500 font-bold"></span> บาท</p>
+                </div>
+                <div class="text-xs text-red-500 mb-4 text-center font-medium">* กรุณาตรวจสอบข้อมูลให้ถูกต้อง หากพบข้อมูลเท็จ บริษัทขอสงวนสิทธิ์ในการระงับบัญชีทันที</div>
+                <div class="flex gap-3">
+                    <button onclick="nextStep(2)" class="w-1/3 bg-gray-200 text-gray-700 font-bold py-3 rounded-lg active:scale-95 transition-transform">แก้ไข</button>
+                    <button onclick="submitForm()" class="w-2/3 bg-green-500 text-white font-bold py-3 rounded-lg shadow-md active:scale-95 transition-transform">ยืนยันและส่งคำขอ</button>
+                </div>
             </div>
         </div>
 
-        <!-- Tab 2: Status Check -->
-        <div id="tab-status" class="mx-4 mt-6 hidden">
-            <div class="glass-panel p-6 rounded-2xl">
-                <h2 class="text-xl font-bold text-gray-800 mb-2">ตรวจสอบสถานะการคืนเงิน</h2>
-                <p class="text-sm text-gray-500 mb-6">กรุณาระบุข้อมูลเพื่อค้นหารายการของคุณ</p>
-                
-                <label>Username (บัญชีผู้ใช้)</label>
-                <input type="text" id="s_username" class="input-field" placeholder="ระบุ Username">
-                <label>เบอร์โทรศัพท์</label>
-                <input type="tel" id="s_phone" class="input-field" placeholder="08xxxxxxxx">
-                
-                <button onclick="checkStatus()" class="w-full mt-6 bg-gray-800 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-gray-900 transition flex justify-center items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    ค้นหาข้อมูล
-                </button>
-
-                <div id="status-results" class="mt-8 space-y-4"></div>
+        <!-- TAB 2: STATUS -->
+        <div id="tab-status" class="p-5 tab-content hidden">
+            <h2 class="text-lg font-bold mb-4">ตรวจสอบสถานะคำขอ</h2>
+            <div class="bg-white p-4 rounded-xl border shadow-sm mb-5">
+                <input type="text" id="s_user" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none mb-3" placeholder="Username">
+                <input type="tel" id="s_phone" maxlength="10" class="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none mb-3" placeholder="เบอร์โทรศัพท์">
+                <button onclick="checkStatus()" class="w-full bg-gray-800 text-white font-bold py-3 rounded-lg shadow-md active:scale-95 transition-transform">ค้นหาข้อมูล</button>
+            </div>
+            <div id="status-results" class="space-y-3">
+                <!-- Results will render here -->
+                <div class="text-center text-gray-400 text-sm mt-10">กรอกข้อมูลเพื่อค้นหาประวัติการทำรายการ<br>(ข้อมูลจะถูกลบอัตโนมัติเมื่อครบ 60 วัน)</div>
             </div>
         </div>
 
-        <!-- Tab 3: Policy Document -->
-        <div id="tab-policy" class="mx-4 mt-6 hidden">
-            <div class="flex justify-end gap-2 mb-4">
-                <button onclick="downloadAs('image')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">บันทึกเป็นรูปภาพ</button>
-                <button onclick="downloadAs('pdf')" class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">บันทึก PDF</button>
-            </div>
+        <!-- TAB 3: POLICY & PDF -->
+        <div id="tab-policy" class="p-5 tab-content hidden">
+            <button onclick="exportPDF()" class="w-full bg-red-500 text-white font-bold py-3 rounded-lg shadow-md active:scale-95 transition-transform mb-5 flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                บันทึกเป็น PDF (A4)
+            </button>
             
-            <div id="policy-doc" class="a4-document rounded-xl text-sm text-gray-700 leading-relaxed relative">
-                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-t-xl"></div>
-                
-                <div class="text-center mb-8 pt-4">
-                    <div class="inline-block p-4 rounded-full bg-blue-50 mb-4">
-                        <svg class="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    </div>
-                    <h1 class="text-2xl font-bold text-gray-900">ประกาศ ระเบียบและเงื่อนไขการขอคืนเงิน</h1>
-                    <p class="text-gray-500 mt-1">อัปเดตล่าสุด: <span id="doc-date"></span></p>
-                </div>
-
-                <div class="space-y-6">
-                    <div>
-                        <h3 class="font-bold text-gray-900 text-lg mb-2">ทางผู้ให้บริการจะพิจารณาดำเนินการคืนเงินให้แก่ผู้ใช้งานในกรณีดังต่อไปนี้:</h3>
-                        <ol class="list-decimal pl-6 space-y-2">
-                            <li>กรณีเกิดข้อผิดพลาดในระบบ ระหว่างขั้นตอนการฝากเงินหรือการเติมเครดิต</li>
-                            <li>กรณีระบบของธนาคารขัดข้อง ไม่ว่าจะเป็นแอปพลิเคชันของฝ่ายผู้โอนหรือผู้รับโอน หรืออยู่ในระหว่างการปิดปรับปรุงระบบชั่วคราว</li>
-                            <li>กรณีระบบไม่สามารถยืนยันหรือตรวจสอบธุรกรรมได้ จะดำเนินการตรวจสอบและพิจารณาคืนเงินภายในระยะเวลา 1 - 72 ชั่วโมง</li>
-                            <li>กรณีระบบขัดข้องไม่สามารถเติมเครดิตได้ เจ้าหน้าที่จะเป็นผู้ดำเนินการตรวจสอบและแก้ไขปัญหาดังกล่าว</li>
-                            <li>กรณีเกิดข้อผิดพลาดจากธนาคารหรือไม่มีการบันทึกหลักฐาน (สลิป) จะเข้าสู่สถานะรอดำเนินการ โดยใช้ระยะเวลาตรวจสอบภายใน 1 - 72 ชั่วโมง</li>
-                        </ol>
-                    </div>
-
-                    <div class="bg-red-50 p-4 rounded-lg border border-red-100">
-                        <h3 class="font-bold text-red-700 text-lg mb-2">หมายเหตุ (ข้อสงวนสิทธิ์)</h3>
-                        <ol class="list-decimal pl-6 space-y-2 text-red-900">
-                            <li><strong>กรณีชำระเงินเกินกำหนด:</strong> หากยอดเงินที่โอนเข้ามาไม่ตรงกับรายการ ทางระบบขอสงวนสิทธิ์ในการคืนเงินทุกกรณี โดยจะดำเนินการปรับยอดเงินส่วนต่างเข้าสู่บัญชีผู้ใช้งาน (User) ของท่านแทน</li>
-                            <li><strong>กรณีหลักฐานไม่ครบถ้วน:</strong> หากผู้ใช้งานไม่มีหลักฐานการโอนเงิน หรือไม่สามารถชี้แจงรายละเอียดของรายการธุรกรรมนั้นได้ ขอสงวนสิทธิ์ในการปฏิเสธการคืนเงินทุกกรณี เพื่อรักษามาตรฐานความปลอดภัยสูงสุด</li>
-                            <li><strong>กรณีโอนเงินผิดบัญชี หรือใช้บัญชีบุคคลที่สาม:</strong> หากมีการโอนเงินเข้าผิดบัญชี หรือมอบหมายให้บุคคลที่สามทำรายการแทน ทางผู้ให้บริการขอปฏิเสธความรับผิดชอบต่อความเสียหายที่เกิดขึ้นทุกกรณี</li>
-                            <li><strong>กรณีพบธุรกรรมต้องสงสัย:</strong> หากตรวจพบความผิดปกติในการทำรายการ ยอดเครดิตดังกล่าวจะถูกระงับ (อายัด) ไว้เป็นการชั่วคราวเพื่อเข้าสู่กระบวนการตรวจสอบโดยละเอียด</li>
-                            <li><strong>การขอรับเอกสาร:</strong> ท่านสามารถขอรับแบบฟอร์มการขอคืนเงินได้จากเมนูด้านล่าง หรือพิมพ์คำว่า "แบบฟอร์มการคืนเงิน" เพื่อให้ระบบจัดส่งเอกสารให้</li>
-                        </ol>
-                    </div>
-
-                    <div class="bg-blue-50 p-4 rounded-lg">
-                        <h3 class="font-bold text-blue-900 mb-2">🕒 วันและเวลาทำการตรวจสอบ</h3>
-                        <ul class="list-disc pl-6 space-y-1 text-blue-800">
-                            <li><strong>เปิดทำการ:</strong> วันจันทร์ - วันศุกร์ เวลา 09.30 - 16.00 น.</li>
-                            <li><strong>ปิดทำการ:</strong> วันเสาร์ วันอาทิตย์ และวันหยุดนักขัตฤกษ์</li>
-                            <li>การตรวจสอบรายการแจ้งผลการดำเนินการภายใน 1-72 ชั่วโมง</li>
-                            <li><strong>การคืนเงิน:</strong> จะตัดรอบบิลทุกวันที่ 15 และวันที่ 30 ของทุกเดือน</li>
-                        </ul>
-                    </div>
+            <div id="policy-content" class="bg-white p-6 rounded-xl border shadow-sm text-sm leading-relaxed" style="font-family: 'Prompt', sans-serif;">
+                <div class="text-center mb-6">
+                    <img src="https://nextlive.shop/public/uploads/1785839615436-941398985-IMG_3225.png" alt="Logo" class="w-16 h-16 mx-auto mb-2 object-cover rounded-full">
+                    <h2 class="text-lg font-bold text-gray-800">ระเบียบและเงื่อนไขการขอคืนเงิน</h2>
                 </div>
                 
-                <div class="mt-12 pt-6 border-t text-center text-gray-400 text-xs">
-                    เอกสารฉบับนี้สร้างโดยระบบอัตโนมัติ ไม่จำเป็นต้องมีลายเซ็นต์กำกับ | ออกโดยฝ่ายการเงินและบัญชี
+                <p class="font-semibold text-blue-700 mb-2">ทางผู้ให้บริการจะพิจารณาดำเนินการคืนเงินให้แก่ผู้ใช้งานในกรณีดังต่อไปนี้:</p>
+                <ol class="list-decimal pl-5 space-y-1 mb-4 text-gray-700">
+                    <li>กรณีเกิดข้อผิดพลาดในระบบ ระหว่างขั้นตอนการฝากเงินหรือการเติมเครดิต</li>
+                    <li>กรณีระบบของธนาคารขัดข้อง ไม่ว่าจะเป็นแอปพลิเคชันของฝ่ายผู้โอนหรือผู้รับโอน หรืออยู่ในระหว่างการปิดปรับปรุงระบบชั่วคราว</li>
+                    <li>กรณีระบบไม่สามารถยืนยันหรือตรวจสอบธุรกรรมได้ จะดำเนินการตรวจสอบและพิจารณาคืนเงินภายในระยะเวลา 1 - 72 ชั่วโมง</li>
+                    <li>กรณีระบบขัดข้องไม่สามารถเติมเครดิตได้ เจ้าหน้าที่จะเป็นผู้ดำเนินการตรวจสอบและแก้ไขปัญหาดังกล่าว</li>
+                    <li>กรณีเกิดข้อผิดพลาดจากธนาคารหรือไม่มีการบันทึกหลักฐาน (สลิป) จะเข้าสู่สถานะรอดำเนินการ โดยใช้ระยะเวลาตรวจสอบภายใน 1 - 72 ชั่วโมง</li>
+                </ol>
+
+                <p class="font-semibold text-red-600 mb-2 mt-6">หมายเหตุ (ข้อสงวนสิทธิ์)</p>
+                <ol class="list-decimal pl-5 space-y-1 mb-4 text-gray-700">
+                    <li><strong>กรณีชำระเงินเกินกำหนด:</strong> หากยอดเงินที่โอนเข้ามาไม่ตรงกับรายการ ทางระบบขอสงวนสิทธิ์ในการคืนเงินทุกกรณี โดยจะดำเนินการปรับยอดเงินส่วนต่างเข้าสู่บัญชีผู้ใช้งานของท่านแทน</li>
+                    <li><strong>กรณีหลักฐานไม่ครบถ้วน:</strong> หากผู้ใช้งานไม่มีหลักฐานการโอนเงิน ขอสงวนสิทธิ์ในการปฏิเสธการคืนเงินทุกกรณี เพื่อรักษามาตรฐานความปลอดภัยสูงสุด</li>
+                    <li><strong>กรณีโอนเงินผิดบัญชี หรือใช้บัญชีบุคคลที่สาม:</strong> ทางผู้ให้บริการขอปฏิเสธความรับผิดชอบต่อความเสียหายที่เกิดขึ้นทุกกรณี</li>
+                    <li><strong>กรณีพบธุรกรรมต้องสงสัย:</strong> ยอดเครดิตดังกล่าวจะถูกระงับ (อายัด) ไว้เป็นการชั่วคราวเพื่อเข้าสู่กระบวนการตรวจสอบโดยละเอียด</li>
+                    <li><strong>การขอรับเอกสาร:</strong> ท่านสามารถขอรับแบบฟอร์มการขอคืนเงินได้จากเมนูด้านล่าง หรือพิมพ์คำว่า "แบบฟอร์มการคืนเงิน" เพื่อให้ระบบจัดส่งเอกสารให้</li>
+                </ol>
+
+                <div class="bg-gray-100 p-4 rounded-lg mt-6 border-l-4 border-blue-500">
+                    <p class="font-semibold mb-1">วันและเวลาทำการตรวจสอบ</p>
+                    <ul class="list-disc pl-5 text-gray-600">
+                        <li>เปิดทำการ: วันจันทร์ - วันศุกร์ เวลา 09.30 - 16.00 น.</li>
+                        <li>ปิดทำการ: วันเสาร์ วันอาทิตย์ และวันหยุดนักขัตฤกษ์</li>
+                        <li>การตรวจสอบรายการแจ้งผลการดำเนินการภายใน 1-72 ชั่วโมง</li>
+                        <li>การคืนเงิน จะตัดรอบบิลทุกวันที่ 15 และวันที่ 30 ของทุกเดือน</li>
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Custom Modal Popup -->
-    <div id="custom-modal" class="modal-overlay">
-        <div class="modal-content">
-            <div id="modal-icon" class="text-4xl mb-3">⚠️</div>
-            <h3 id="modal-title" class="text-lg font-bold text-gray-800 mb-2">แจ้งเตือน</h3>
-            <p id="modal-desc" class="text-sm text-gray-500 mb-5">รายละเอียด...</p>
-            <button onclick="document.getElementById('custom-modal').style.display='none'" class="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700">ตกลง</button>
+    <!-- Custom Modals -->
+    <div id="modal-alert" class="modal">
+        <div class="bg-white rounded-2xl p-6 max-w-xs w-full text-center shadow-2xl relative">
+            <div id="modal-icon" class="text-5xl mb-4">✅</div>
+            <h3 id="modal-title" class="text-lg font-bold mb-2">สำเร็จ</h3>
+            <p id="modal-text" class="text-sm text-gray-500 mb-5">ข้อความรายละเอียด</p>
+            <button onclick="closeModal()" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg active:scale-95 transition-transform">ตกลง</button>
+        </div>
+    </div>
+
+    <div id="modal-loading" class="modal" style="z-index: 100;">
+        <div class="bg-white rounded-2xl p-6 max-w-xs w-full text-center shadow-2xl">
+            <div class="loader mb-4"></div>
+            <h3 class="text-lg font-bold text-gray-800">กำลังประมวลผล...</h3>
+            <p class="text-sm text-gray-500 mt-1">กรุณาอย่าปิดหน้าต่างนี้ ระบบกำลังบันทึกข้อมูลและอัปโหลดหลักฐาน</p>
         </div>
     </div>
 
     <script>
-        // 📌 กำหนดค่า Firebase ของคุณ
+        // Firebase Config
         const firebaseConfig = { databaseURL: "https://shop-991-default-rtdb.asia-southeast1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let clientIP = "Unknown";
+        let globalIP = "Unknown";
         
-        // Fetch IP on load
-        fetch('https://api.ipify.org?format=json').then(r => r.json()).then(data => clientIP = data.ip).catch(e => console.log(e));
+        // Fetch IP
+        fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => globalIP = d.ip).catch(e => console.log('IP Fetch Error'));
 
-        // แสดงวันที่ปัจจุบันในเอกสาร
-        document.getElementById('doc-date').innerText = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-
-        // ==========================================
-        // Device Guard Logic (OS & LINE App Check)
-        // ==========================================
-        function checkEnvironment() {
-            const ua = navigator.userAgent || navigator.vendor || window.opera;
-            let isLine = ua.indexOf("Line") > -1;
-            let isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
-            let isAndroid = /android/i.test(ua);
-            
-            let passed = false;
-            
-            if (isLine) {
-                if (isIOS) {
-                    let match = (navigator.appVersion).match(/OS (\d+)_(\d+)_?(\d+)?/);
-                    let iosVer = match ? parseInt(match[1], 10) : 0;
-                    if (iosVer >= 18) passed = true;
-                } else if (isAndroid) {
-                    passed = true; // อนุโลม Android ปัจจุบัน
-                }
-            }
-            
-            // Bypass สำหรับพัฒนาบนคอม (ลบออกถ้าใช้งานจริงแบบเคร่งครัด)
-            if(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") passed = true;
-
-            if (!passed) {
-                let count = 5;
-                const cntEl = document.getElementById('countdown');
-                const interval = setInterval(() => {
-                    count--;
-                    cntEl.innerText = count;
-                    if(count <= 0) {
-                        clearInterval(interval);
-                        window.location.href = "https://line.me/R/ti/p/@jpo3470r";
-                    }
-                }, 1000);
-            } else {
-                document.getElementById('guard-screen').style.display = 'none';
-                document.getElementById('app-content').style.display = 'block';
-                checkAutoDelete(); // เช็คลบข้อมูลเกิน 60 วันเมื่อเข้าใช้งาน
-            }
-        }
-        window.onload = checkEnvironment;
-
-        // ==========================================
-        // UI Interactions
-        // ==========================================
-        function showModal(icon, title, desc) {
-            document.getElementById('modal-icon').innerText = icon;
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-desc').innerText = desc;
-            document.getElementById('custom-modal').style.display = 'flex';
-        }
-
-        function switchTab(tabId, btn) {
-            document.querySelectorAll('.step-container').forEach(e => {
-                if(!e.id.startsWith('step')) e.classList.add('hidden');
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+                el.classList.add('text-gray-500');
             });
-            document.getElementById('tab-form').classList.add('hidden');
-            document.getElementById('tab-status').classList.add('hidden');
-            document.getElementById('tab-policy').classList.add('hidden');
-            
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            
             document.getElementById(tabId).classList.remove('hidden');
-            btn.classList.add('active');
+            
+            const btnId = tabId.replace('tab-', 'btn-');
+            document.getElementById(btnId).classList.remove('text-gray-500');
+            document.getElementById(btnId).classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
         }
 
         function nextStep(step) {
+            // Validation Before Next
             if (step === 2) {
-                if(!document.getElementById('f_username').value || !document.getElementById('f_phone').value) {
-                    return showModal('⚠️', 'ข้อมูลไม่ครบ', 'กรุณากรอก Username และเบอร์โทรศัพท์ให้ครบถ้วน');
-                }
+                const req = ['f_username', 'f_email', 'f_fname', 'f_lname', 'f_phone'];
+                for (let id of req) if (!document.getElementById(id).value.trim()) return showAlert('⚠️', 'ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลส่วนตัวให้ครบถ้วน');
+                if (document.getElementById('f_phone').value.length !== 10) return showAlert('⚠️', 'เบอร์โทรไม่ถูกต้อง', 'กรุณากรอกเบอร์โทรศัพท์ 10 หลัก');
             }
-            document.querySelectorAll('.step-container').forEach(e => e.classList.remove('active'));
-            document.getElementById(`step${step}`).classList.add('active');
-            
-            if(step === 2) {
-                document.getElementById('step2-icon').classList.replace('bg-gray-300', 'bg-blue-600');
-                document.getElementById('step2-icon').classList.replace('text-gray-600', 'text-white');
-                document.getElementById('progress-line').style.width = '50%';
+            if (step === 3) {
+                const req = ['f_bank', 'f_acc', 'f_amt'];
+                for (let id of req) if (!document.getElementById(id).value.trim()) return showAlert('⚠️', 'ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลบัญชีให้ครบถ้วน');
+                if (!document.getElementById('f_idcard').files[0] || !document.getElementById('f_bankbook').files[0]) return showAlert('⚠️', 'ขาดเอกสาร', 'กรุณาอัปโหลดสำเนาบัตรประชาชนและสมุดบัญชี');
+                
+                // Set Preview Data
+                document.getElementById('c_user').innerText = document.getElementById('f_username').value;
+                document.getElementById('c_name').innerText = `${document.getElementById('f_fname').value} ${document.getElementById('f_lname').value}`;
+                document.getElementById('c_phone').innerText = document.getElementById('f_phone').value;
+                document.getElementById('c_bank').innerText = document.getElementById('f_bank').options[document.getElementById('f_bank').selectedIndex].text;
+                document.getElementById('c_acc').innerText = document.getElementById('f_acc').value;
+                document.getElementById('c_amt').innerText = Number(document.getElementById('f_amt').value).toLocaleString();
             }
-        }
 
-        function prevStep(step) {
-            document.querySelectorAll('.step-container').forEach(e => e.classList.remove('active'));
-            document.getElementById(`step${step}`).classList.add('active');
-            
-            if(step === 1) {
-                document.getElementById('step2-icon').classList.replace('bg-blue-600', 'bg-gray-300');
-                document.getElementById('step2-icon').classList.replace('text-white', 'text-gray-600');
-                document.getElementById('progress-line').style.width = '0%';
-            }
-        }
-
-        function resetForm() {
-            document.getElementById('refundForm').reset();
-            prevStep(1);
-        }
-
-        // ==========================================
-        // File to Base64 Converter
-        // ==========================================
-        function getBase64(file) {
-            return new Promise((resolve, reject) => {
-                if(!file) resolve("");
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
+            // UI Update
+            [1, 2, 3].forEach(s => {
+                document.getElementById(`step-${s}-content`).classList.add('hidden');
+                document.getElementById(`step-${s}-dot`).className = `w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 ${s === step ? 'step-active' : (s < step ? 'bg-blue-500 text-white border-blue-500' : 'step-inactive')}`;
             });
+            document.getElementById(`step-${step}-content`).classList.remove('hidden');
+            
+            document.getElementById('progress-line-1').style.width = step >= 2 ? '100%' : '0%';
+            document.getElementById('progress-line-2').style.width = step >= 3 ? '100%' : '0%';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // ==========================================
-        // Core Logic: Submit Form & Gen TK
-        // ==========================================
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader(); reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result); reader.onerror = e => reject(e);
+        });
+
         async function submitForm() {
-            const acc = document.getElementById('f_acc_num').value;
-            const amt = document.getElementById('f_amount').value;
-            const bank = document.getElementById('f_bank').value;
-            
-            if(!acc || !amt || !bank) {
-                return showModal('⚠️', 'ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลบัญชีธนาคารและจำนวนเงินให้ครบถ้วน');
-            }
-
-            // Show loading
-            document.getElementById('custom-modal').style.display = 'flex';
-            document.getElementById('modal-icon').innerHTML = '<div class="loader mx-auto"></div>';
-            document.getElementById('modal-title').innerText = 'กำลังบันทึกข้อมูล';
-            document.getElementById('modal-desc').innerText = 'กรุณารอสักครู่...';
-
-            const phone = document.getElementById('f_phone').value;
-            
-            // Generate TK (TK230826-3299-1437)
-            const d = new Date();
-            const dateStr = String(d.getDate()).padStart(2, '0') + String(d.getMonth()+1).padStart(2, '0') + String(d.getFullYear()).slice(2);
-            const timeStr = String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0');
-            const tkCode = `TK${dateStr}-${phone.slice(-4) || '0000'}-${timeStr}`;
-
+            showLoading();
             try {
-                // Convert files
-                const idCardFile = document.getElementById('f_idcard').files[0];
-                const bankFile = document.getElementById('f_bankbook').files[0];
-                const idCardBase64 = idCardFile ? await getBase64(idCardFile) : "";
-                const bankBase64 = bankFile ? await getBase64(bankFile) : "";
+                const idCardBase64 = await toBase64(document.getElementById('f_idcard').files[0]);
+                const bankBase64 = await toBase64(document.getElementById('f_bankbook').files[0]);
 
-                const data = {
-                    TK_Number: tkCode,
-                    Date: d.toLocaleDateString('th-TH'),
-                    Time: d.toLocaleTimeString('th-TH'),
-                    Timestamp: d.getTime(), // สำหรับลบออโต้ 60 วัน
-                    IP_Address: clientIP,
-                    Username: document.getElementById('f_username').value,
-                    Email: document.getElementById('f_email').value,
-                    Name: document.getElementById('f_name').value,
-                    Surname: document.getElementById('f_surname').value,
-                    Phone: phone,
-                    IDCard_Copy: idCardBase64,
-                    BankBook_Copy: bankBase64,
-                    Bank: bank,
-                    Account_Number: acc,
-                    Amount: amt,
-                    Status: "รอดำเนินการ",
-                    Note: "",
-                    Evidence: "" // แอดมินเป็นคนแนบ
+                const phone = document.getElementById('f_phone').value;
+                const now = new Date();
+                const yy = String(now.getFullYear()).slice(-2);
+                const mm = String(now.getMonth() + 1).padStart(2, '0');
+                const dd = String(now.getDate()).padStart(2, '0');
+                const HH = String(now.getHours()).padStart(2, '0');
+                const MM = String(now.getMinutes()).padStart(2, '0');
+                const tkId = `TK${yy}${mm}${dd}-${phone.slice(-4)}-${HH}${MM}`;
+
+                // ฟังก์ชันอัปโหลดภาพ หากรันใน GAS ให้เรียกฝั่งเซิร์ฟเวอร์
+                let idCardUrl = ""; let bankUrl = "";
+                if (typeof google !== 'undefined' && google.script && google.script.run) {
+                    idCardUrl = await new Promise(r => google.script.run.withSuccessHandler(r).uploadFileToDrive(idCardBase64, `${tkId}_IDCard.jpg`));
+                    bankUrl = await new Promise(r => google.script.run.withSuccessHandler(r).uploadFileToDrive(bankBase64, `${tkId}_BankBook.jpg`));
+                } else {
+                    // Fallback ถ้าเปิดนอก GAS
+                    idCardUrl = "https://via.placeholder.com/150?text=IDCard";
+                    bankUrl = "https://via.placeholder.com/150?text=BankBook";
+                }
+
+                const payload = {
+                    date: `${dd}/${mm}/${now.getFullYear()}`,
+                    time: `${HH}:${MM}:${String(now.getSeconds()).padStart(2,'0')}`,
+                    ip: globalIP,
+                    tk_id: tkId,
+                    username: document.getElementById('f_username').value,
+                    email: document.getElementById('f_email').value,
+                    firstname: document.getElementById('f_fname').value,
+                    lastname: document.getElementById('f_lname').value,
+                    phone: phone,
+                    bank_name: document.getElementById('f_bank').value,
+                    account_number: document.getElementById('f_acc').value,
+                    amount: parseFloat(document.getElementById('f_amt').value),
+                    status: "รอดำเนินการ",
+                    note: "",
+                    proof_url: "",
+                    id_card_url: idCardUrl,
+                    bank_book_url: bankUrl,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
                 };
 
-                // Push to Firebase
-                await db.ref('Refunds').push(data);
-
-                // Success UI
-                document.getElementById('custom-modal').style.display = 'none';
-                document.getElementById('show_tk').innerText = tkCode;
+                await db.ref('Refunds').push(payload);
+                hideLoading();
+                showAlert('✅', 'บันทึกสำเร็จ', `ส่งคำขอเรียบร้อยแล้ว<br>เลขที่รายการ: <b>${tkId}</b>`);
                 
-                document.getElementById('step3-icon').classList.replace('bg-gray-300', 'bg-blue-600');
-                document.getElementById('step3-icon').classList.replace('text-gray-600', 'text-white');
-                document.getElementById('progress-line').style.width = '100%';
-                
-                document.querySelectorAll('.step-container').forEach(e => e.classList.remove('active'));
-                document.getElementById(`step3`).classList.add('active');
+                // Clear Form
+                ['f_username','f_email','f_fname','f_lname','f_phone','f_bank','f_acc','f_amt','f_idcard','f_bankbook'].forEach(id => document.getElementById(id).value = '');
+                setTimeout(() => { switchTab('tab-status'); nextStep(1); }, 2000);
 
             } catch (error) {
+                hideLoading();
+                showAlert('❌', 'เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่');
                 console.error(error);
-                showModal('❌', 'เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
             }
         }
 
-        // ==========================================
-        // Core Logic: Check Status
-        // ==========================================
         function checkStatus() {
-            const user = document.getElementById('s_username').value.trim();
-            const phone = document.getElementById('s_phone').value.trim();
+            const u = document.getElementById('s_user').value.trim();
+            const p = document.getElementById('s_phone').value.trim();
+            if(!u || !p) return showAlert('⚠️', 'ข้อมูลไม่ครบ', 'กรุณากรอก Username และเบอร์โทรศัพท์');
+
+            showLoading();
+            const container = document.getElementById('status-results');
             
-            if(!user || !phone) return showModal('⚠️', 'ข้อมูลไม่ครบ', 'กรุณาระบุ Username และเบอร์โทรศัพท์');
-
-            const resDiv = document.getElementById('status-results');
-            resDiv.innerHTML = '<div class="text-center py-4 text-gray-500">กำลังค้นหา...</div>';
-
             db.ref('Refunds').once('value', snap => {
+                hideLoading();
+                container.innerHTML = '';
                 let found = false;
-                let html = '';
-                
+                const now = Date.now();
+                const maxAge = 60 * 24 * 60 * 60 * 1000; // 60 days
+
                 snap.forEach(child => {
-                    const d = child.val();
-                    if(d.Username === user && d.Phone === phone) {
+                    const data = child.val();
+                    const key = child.key;
+
+                    // Auto delete older than 60 days
+                    if (data.timestamp && (now - data.timestamp) > maxAge) {
+                        db.ref('Refunds/' + key).remove();
+                        return; // skip rendering
+                    }
+
+                    if (data.username.toLowerCase() === u.toLowerCase() && data.phone === p) {
                         found = true;
-                        
-                        // กำหนดสีตามสถานะ
-                        let sColor = 'bg-yellow-100 text-yellow-700 border-yellow-200';
-                        if(d.Status === 'อนุมัติ') sColor = 'bg-green-100 text-green-700 border-green-200';
-                        else if(['ปฏิเสธ', 'บัญชีต้องสงสัย ไม่สามารถทำรายการได้'].includes(d.Status)) sColor = 'bg-red-100 text-red-700 border-red-200';
-                        else if(d.Status !== 'รอดำเนินการ') sColor = 'bg-orange-100 text-orange-700 border-orange-200';
+                        let sColor = data.status === 'อนุมัติ' ? 'text-green-600 bg-green-100' : 
+                                     data.status === 'รอดำเนินการ' ? 'text-orange-600 bg-orange-100' : 
+                                     'text-red-600 bg-red-100';
 
-                        html += `
-                        <div class="border rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition">
-                            <div class="flex justify-between items-start border-b pb-3 mb-3">
-                                <div>
-                                    <span class="text-xs text-gray-400">เลขที่รายการ</span>
-                                    <div class="font-bold text-gray-800 font-mono">${d.TK_Number}</div>
+                        container.innerHTML += `
+                            <div class="bg-white p-4 rounded-xl border shadow-sm flex flex-col gap-2">
+                                <div class="flex justify-between items-start border-b pb-2">
+                                    <div>
+                                        <div class="text-xs text-gray-500">${data.date} ${data.time}</div>
+                                        <div class="font-bold text-blue-700">${data.tk_id}</div>
+                                    </div>
+                                    <div class="px-2 py-1 rounded-full text-xs font-bold ${sColor}">${data.status}</div>
                                 </div>
-                                <div class="px-3 py-1 rounded-full text-xs font-bold border ${sColor}">${d.Status}</div>
+                                <div class="grid grid-cols-2 text-sm">
+                                    <div class="text-gray-500">ยอดเงินคืน:</div><div class="text-right font-semibold">${Number(data.amount).toLocaleString()} ฿</div>
+                                    <div class="text-gray-500 mt-1">ธนาคาร:</div><div class="text-right mt-1">${data.bank_name}</div>
+                                    <div class="text-gray-500 mt-1">เลขบัญชี:</div><div class="text-right mt-1">${data.account_number}</div>
+                                </div>
+                                ${data.note ? `<div class="mt-2 p-2 bg-gray-50 rounded text-xs text-red-600"><span class="font-bold">หมายเหตุ:</span> ${data.note}</div>` : ''}
+                                ${data.proof_url ? `<a href="${data.proof_url}" target="_blank" class="mt-2 w-full block text-center bg-green-50 text-green-700 py-2 rounded-lg text-xs font-bold border border-green-200">เปิดดูหลักฐานการโอนเงิน</a>` : ''}
                             </div>
-                            <div class="grid grid-cols-2 gap-2 text-sm">
-                                <div class="text-gray-500">วันที่สร้าง:</div><div class="text-right font-medium">${d.Date} ${d.Time}</div>
-                                <div class="text-gray-500">ยอดเงิน:</div><div class="text-right font-bold text-blue-600">฿${Number(d.Amount).toLocaleString()}</div>
-                                <div class="text-gray-500">ธนาคาร:</div><div class="text-right">${d.Bank}</div>
-                            </div>
-                            ${d.Note ? `<div class="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-600"><b>หมายเหตุจากระบบ:</b> ${d.Note}</div>` : ''}
-                            ${d.Evidence ? `<div class="mt-3"><a href="${d.Evidence}" target="_blank" class="text-blue-500 text-sm font-medium underline flex items-center gap-1">ดูหลักฐานการโอน</a></div>` : ''}
-                        </div>`;
+                        `;
                     }
                 });
 
-                if(!found) resDiv.innerHTML = '<div class="text-center py-6 text-red-500 font-medium bg-red-50 rounded-xl">❌ ไม่พบข้อมูลในระบบ หรือรายการถูกลบไปแล้ว</div>';
-                else resDiv.innerHTML = html;
-            });
-        }
-
-        // ==========================================
-        // Data Cleanup (60 Days Auto Delete)
-        // ==========================================
-        function checkAutoDelete() {
-            const now = new Date().getTime();
-            const days60 = 60 * 24 * 60 * 60 * 1000;
-            
-            db.ref('Refunds').once('value', snap => {
-                snap.forEach(child => {
-                    const d = child.val();
-                    if(d.Timestamp && (now - d.Timestamp > days60)) {
-                        db.ref(`Refunds/${child.key}`).remove(); // ลบถาวร
-                    }
-                });
-            });
-        }
-
-        // ==========================================
-        // PDF & Image Export
-        // ==========================================
-        function downloadAs(type) {
-            const target = document.getElementById('policy-doc');
-            
-            // Show loading
-            document.getElementById('custom-modal').style.display = 'flex';
-            document.getElementById('modal-icon').innerHTML = '⏳';
-            document.getElementById('modal-title').innerText = 'กำลังสร้างเอกสาร';
-            document.getElementById('modal-desc').innerText = 'กรุณารอสักครู่...';
-
-            html2canvas(target, { scale: 2, useCORS: true }).then(canvas => {
-                document.getElementById('custom-modal').style.display = 'none';
-                
-                if (type === 'image') {
-                    const link = document.createElement('a');
-                    link.download = 'Refund_Policy.png';
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
-                } else if (type === 'pdf') {
-                    const imgData = canvas.toDataURL('image/jpeg', 0.98);
-                    const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
-                    const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-                    pdf.save("Refund_Policy.pdf");
+                if (!found) {
+                    container.innerHTML = `<div class="text-center p-5 bg-white rounded-xl border shadow-sm text-gray-500 text-sm">ไม่พบข้อมูล หรือ ข้อมูลอาจถูกลบอัตโนมัติแล้ว</div>`;
                 }
             });
         }
+
+        function exportPDF() {
+            const element = document.getElementById('policy-content');
+            const opt = {
+                margin:       10,
+                filename:     'ระเบียบการขอคืนเงิน.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+
+        // Modal Helpers
+        function showAlert(icon, title, text) {
+            document.getElementById('modal-icon').innerHTML = icon;
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-text').innerHTML = text;
+            document.getElementById('modal-alert').classList.add('active');
+        }
+        function closeModal() { document.getElementById('modal-alert').classList.remove('active'); }
+        function showLoading() { document.getElementById('modal-loading').classList.add('active'); }
+        function hideLoading() { document.getElementById('modal-loading').classList.remove('active'); }
     </script>
 </body>
 </html>
