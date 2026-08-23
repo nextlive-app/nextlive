@@ -5,23 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Admin System Dashboard</title>
     
+    <!-- Bank Icons CSS (สำหรับโชว์โลโก้ธนาคาร) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/allaboutitappscript/fontbank/banks.min.css">
+    
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     
     <style>
-        :root { --bg-color: #0d1117; --card-bg: rgba(22, 27, 34, 0.7); --primary: #58a6ff; --primary-hover: #79c0ff; --text-main: #c9d1d9; --text-sub: #8b949e; --danger: #f85149; --success: #2ea043; --warning: #d29922; }
+        :root { 
+            --bg-color: #0d1117; 
+            --card-bg: rgba(22, 27, 34, 0.7); 
+            --primary: #58a6ff; 
+            --primary-hover: #79c0ff; 
+            --text-main: #c9d1d9; 
+            --text-sub: #8b949e; 
+            --danger: #f85149; 
+            --success: #2ea043; 
+            --warning: #d29922; 
+        }
+        
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg-color); color: var(--text-main); height: 100vh; overflow: hidden; overscroll-behavior-y: none; }
         body { -webkit-user-select: none; -webkit-touch-callout: none; }
         
         .container { display: flex; height: 100vh; overflow: hidden; position: relative; }
         
-        /* Mobile Header & Sidebar */
+        /* Mobile Header */
         .mobile-header { display: none; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(13, 17, 23, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(240,246,252,0.1); position: fixed; top: 0; left: 0; width: 100%; z-index: 99; box-sizing: border-box; }
-        .mobile-header .logo { margin: 0; font-size: 18px; display: flex; align-items: center; }
+        .mobile-header .logo { margin: 0; font-size: 18px; }
         .hamburger { background: transparent; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; }
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; backdrop-filter: blur(3px); opacity: 0; transition: opacity 0.3s; }
         
+        /* Sidebar */
         .sidebar { width: 260px; background: rgba(13, 17, 23, 0.95); padding: 30px 20px; border-right: 1px solid rgba(240,246,252,0.1); z-index: 1000; display: flex; flex-direction: column; transition: transform 0.3s ease; box-sizing: border-box; }
         .logo { font-size: 22px; font-weight: bold; margin-bottom: 40px; color: var(--primary); display: flex; align-items: center; gap: 10px; }
         .menu-item { padding: 15px 20px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; color: var(--text-sub); transition: 0.3s; display: flex; align-items: center; font-weight: 500; font-size: 15px; }
@@ -38,29 +53,28 @@
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Grids & Cards */
+        /* Dashboard Cards */
         .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
         .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .glass-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid rgba(240,246,252,0.1); border-radius: 16px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
         
-        /* Tables */
+        /* Tables (Responsive wrapper) */
         .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0; margin: 0; border-radius: 16px; }
         table { width: 100%; border-collapse: collapse; min-width: 600px; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(240,246,252,0.1); }
         th { color: var(--text-sub); font-weight: 600; font-size: 13px; text-transform: uppercase; white-space: nowrap; }
         .profile-img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.1); }
         
-        /* Accordion row styles for Refunds */
         .tr-clickable { cursor: pointer; transition: background 0.2s; }
         .tr-clickable:hover { background: rgba(255,255,255,0.02); }
         .tr-detail { display: none; background: rgba(0,0,0,0.3); }
         .tr-detail.open { display: table-row; animation: fadeIn 0.3s; }
         .detail-box { padding: 20px; border-left: 3px solid var(--primary); display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .detail-item { font-size: 13px; margin-bottom: 8px; }
+        .detail-item { font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
         .detail-item span { color: var(--text-sub); display: inline-block; width: 100px; }
-        .img-preview { max-width: 150px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; margin-top: 5px; }
+        .img-preview { max-width: 150px; max-height: 100px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; margin-top: 5px; object-fit: cover; }
 
-        /* Buttons & Inputs */
+        /* Form & Buttons */
         .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; color: white; font-weight: 600; transition: all 0.2s; font-size: 14px; white-space: nowrap; }
         .btn-primary { background: var(--primary); color: #000; }
         .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); }
@@ -73,26 +87,27 @@
         input, select, textarea { width: 100%; padding: 12px 15px; margin: 8px 0 20px 0; border: 1px solid rgba(240,246,252,0.1); border-radius: 8px; background: rgba(1,4,9,0.5); color: white; font-family: inherit; font-size: 16px !important; transition: 0.3s; box-sizing: border-box; }
         input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); background: rgba(1,4,9,0.8); }
         label { color: var(--text-sub); font-size: 13px; font-weight: 600; display: block; }
+        
         .qr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .qr-grid input { margin: 0; }
         .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; border: 1px solid transparent; }
-        
-        /* Modals & Login Screen */
+
+        /* Login Screen */
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, #161b22 0%, #0d1117 100%); z-index: 99999; display: flex; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .login-glass { background: rgba(22, 27, 34, 0.8); backdrop-filter: blur(25px); border: 1px solid rgba(240,246,252,0.1); border-radius: 20px; padding: 40px; width: 100%; max-width: 360px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.5); box-sizing: border-box; }
-        
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(5px); animation: fadeIn 0.2s; padding: 15px; box-sizing: border-box; }
+
+        /* Custom Modals */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); animation: fadeIn 0.2s; padding: 15px; box-sizing: border-box; }
         .modal-box { background: rgba(22, 27, 34, 0.98); padding: 30px; border-radius: 20px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; border: 1px solid rgba(240,246,252,0.1); box-shadow: 0 20px 60px rgba(0,0,0,0.5); box-sizing: border-box; }
         .modal-box h2 { margin-top: 0; margin-bottom: 20px; color: white; font-size: 20px; }
         .modal-actions { display: flex; gap: 10px; margin-top: 25px; flex-wrap: wrap; }
         .modal-actions button { flex: 1; min-width: 120px; }
-
+        
         .alert-box { max-width: 340px; text-align: center; padding: 35px 25px; }
         .alert-icon { font-size: 45px; margin-bottom: 15px; }
         .alert-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; color: white; }
         .alert-text { color: var(--text-sub); font-size: 14px; margin-bottom: 25px; line-height: 1.5; }
 
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
@@ -126,8 +141,15 @@
         </div>
     </div>
 
-    <!-- Alert & Confirm Modals -->
-    <div id="custom-alert" class="modal" style="z-index: 999999;">
+    <!-- Image Lightbox Modal for Admin -->
+    <div id="lightbox-modal" class="modal" onclick="closeLightbox()" style="z-index: 999999;">
+        <div class="relative w-full max-w-2xl p-2 text-center" onclick="event.stopPropagation()" style="background: transparent; box-shadow: none;">
+            <button onclick="closeLightbox()" style="position: absolute; right: 10px; top: 10px; background: rgba(0,0,0,0.7); color: white; border: none; border-radius: 50%; width: 35px; height: 35px; cursor: pointer; font-size: 16px;">✕</button>
+            <img id="lightbox-img" src="" style="width: 100%; max-height: 85vh; object-fit: contain; border-radius: 12px; margin: 0 auto;">
+        </div>
+    </div>
+
+    <div id="custom-alert" class="modal" style="z-index: 999998;">
         <div class="modal-box alert-box">
             <div id="alert-icon" class="alert-icon">✨</div>
             <div id="alert-title" class="alert-title">Title</div>
@@ -136,7 +158,7 @@
         </div>
     </div>
 
-    <div id="custom-confirm" class="modal" style="z-index: 999998;">
+    <div id="custom-confirm" class="modal" style="z-index: 999997;">
         <div class="modal-box alert-box">
             <div id="confirm-icon" class="alert-icon">⚠️</div>
             <div id="confirm-title" class="alert-title">Title</div>
@@ -148,7 +170,6 @@
         </div>
     </div>
 
-    <!-- DATA CRUD MODALS -->
     <div id="crud-modal" class="modal">
         <div class="modal-box">
             <h2 id="crud-title">จัดการข้อมูล</h2>
@@ -201,7 +222,7 @@
     </div>
 
     <div class="mobile-header">
-        <div class="logo"><div style="width:14px; height:14px; background:var(--primary); border-radius:4px; margin-right:8px;"></div>Admin Panel</div>
+        <div class="logo"><div style="width:14px; height:14px; background:var(--primary); border-radius:4px; margin-right:8px; display:inline-block;"></div>Admin Panel</div>
         <button class="hamburger" onclick="toggleSidebar()">☰</button>
     </div>
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -326,7 +347,6 @@
     </div>
 
     <script>
-        // ป้องกันคลิกขวาและเครื่องมือผู้พัฒนา (F12)
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.onkeydown = e => { if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74))) return false; };
 
@@ -345,7 +365,32 @@
             "บัญชีถูกอายัด02", "บัญชัปลายทางไม่สามารถทำรายการได้", "บัญชีต้องสงสัย"
         ];
 
-        // Mobile Sidebar Toggle
+        // =====================================
+        // ฟังก์ชันแปลงลิงก์ Google Drive
+        // ให้สามารถใช้โชว์ในแท็ก <img src="..."> ได้
+        // =====================================
+        function getDriveDirectUrl(url) {
+            if (!url) return '';
+            let match = url.match(/\/d\/(.+?)\//);
+            if (match && match[1]) {
+                return `https://drive.google.com/uc?id=${match[1]}`;
+            }
+            let match2 = url.match(/id=([^&]+)/);
+            if(match2 && match2[1]) {
+                return `https://drive.google.com/uc?id=${match2[1]}`;
+            }
+            return url;
+        }
+
+        function openLightbox(url) {
+            if(!url) return;
+            document.getElementById('lightbox-img').src = url;
+            document.getElementById('lightbox-modal').style.display = 'flex';
+        }
+        function closeLightbox() {
+            document.getElementById('lightbox-modal').style.display = 'none';
+        }
+
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('active');
             document.getElementById('sidebar-overlay').classList.toggle('active');
@@ -359,7 +404,6 @@
             if (window.innerWidth <= 768) toggleSidebar(); // Auto-close on mobile
         }
 
-        // Custom Modal Controllers
         function customAlert(icon, title, text) {
             document.getElementById('alert-icon').innerText = icon === 'success' ? '✅' : (icon === 'error' ? '❌' : '⚠️');
             document.getElementById('alert-title').innerText = title;
@@ -618,6 +662,13 @@
                     else if(r.status === 'อนุมัติ') suc++;
                     else can++;
 
+                    // ใช้ getDriveDirectUrl เพื่อเปิดให้สามารถใช้งานเป็น src ใน img ได้เลย
+                    const idCardDirect = getDriveDirectUrl(r.id_card_url);
+                    const bankBookDirect = getDriveDirectUrl(r.bank_book_url);
+                    const proofDirect = getDriveDirectUrl(r.proof_url);
+                    
+                    const bankIconClass = r.bank_icon || 'bank-scb';
+
                     html += `
                         <tr class="tr-clickable" onclick="toggleRefund('${k}')">
                             <td>${r.date}<br><small style="color:var(--text-sub);">${r.time}</small></td>
@@ -634,12 +685,18 @@
                                         <div class="detail-item"><span>ชื่อ-สกุล:</span> ${r.firstname} ${r.lastname}</div>
                                         <div class="detail-item"><span>อีเมล:</span> ${r.email}</div>
                                         <div class="detail-item"><span>IP Address:</span> ${r.ip}</div>
-                                        <div class="detail-item mt-3"><span>ธนาคาร:</span> ${r.bank_name}</div>
+                                        <div class="detail-item mt-3"><span>ธนาคาร:</span> <i class="bank ${bankIconClass} s"></i> ${r.bank_name}</div>
                                         <div class="detail-item"><span>เลขบัญชี:</span> ${r.account_number}</div>
                                         
                                         <div style="margin-top:15px; display:flex; gap:10px;">
-                                            <div><div style="font-size:12px; color:var(--text-sub);">บัตรประชาชน</div><a href="${r.id_card_url}" target="_blank"><img src="${r.id_card_url}" class="img-preview" onerror="this.src='https://via.placeholder.com/150?text=No+Image'"></a></div>
-                                            <div><div style="font-size:12px; color:var(--text-sub);">หน้าสมุดบัญชี</div><a href="${r.bank_book_url}" target="_blank"><img src="${r.bank_book_url}" class="img-preview" onerror="this.src='https://via.placeholder.com/150?text=No+Image'"></a></div>
+                                            <div>
+                                                <div style="font-size:12px; color:var(--text-sub); margin-bottom:3px;">บัตรประชาชน</div>
+                                                <img src="${idCardDirect}" class="img-preview" onclick="openLightbox('${idCardDirect}')" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:12px; color:var(--text-sub); margin-bottom:3px;">หน้าสมุดบัญชี</div>
+                                                <img src="${bankBookDirect}" class="img-preview" onclick="openLightbox('${bankBookDirect}')" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+                                            </div>
                                         </div>
                                     </div>
                                     <div>
@@ -652,7 +709,11 @@
                                         
                                         <label>แนบสลิปหลักฐานการคืนเงิน (ถ้ามี)</label>
                                         <input type="file" id="r-proof-${k}" accept="image/*" style="padding: 8px;">
-                                        ${r.proof_url ? `<div style="margin-top:-10px; margin-bottom:15px; font-size:12px;"><a href="${r.proof_url}" target="_blank" style="color:var(--success);">✅ ดูหลักฐานที่แนบไว้ล่าสุด</a></div>` : ''}
+                                        ${proofDirect ? `
+                                            <div style="margin-top:-10px; margin-bottom:15px; font-size:12px;">
+                                                <div style="color:var(--success); cursor:pointer; font-weight:bold;" onclick="openLightbox('${proofDirect}')">✅ ดูหลักฐานที่แนบไว้ล่าสุด (คลิก)</div>
+                                            </div>
+                                        ` : ''}
                                         
                                         <div style="display:flex; gap:10px; margin-top:15px;">
                                             <button class="btn btn-primary" id="btn-save-${k}" onclick="updateRefund('${k}')" style="flex:1;">💾 บันทึกการเปลี่ยนแปลง</button>
