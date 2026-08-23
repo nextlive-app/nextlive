@@ -40,7 +40,7 @@
         .spinner-blade:nth-child(11) { transform: rotate(300deg) translate(0, 130%); animation-delay: -0.083s; }
         .spinner-blade:nth-child(12) { transform: rotate(330deg) translate(0, 130%); animation-delay: 0s; }
         
-        .img-preview { display: none; width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; margin-top: 10px; border: 1px solid #e2e8f0; }
+        .img-preview { display: none; width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; margin-top: 10px; border: 1px solid #e2e8f0; cursor: pointer; }
         
         /* Formal Input Focus */
         input, select { transition: all 0.2s ease-in-out; }
@@ -67,21 +67,24 @@
             if (!isLocal && (!isLINE || !isAllowedOS)) {
                 document.write(`
                     <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&display=swap" rel="stylesheet">
                     <style>
-                        body{margin:0;background-color:#f1f5f9;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;font-family:'Prompt',sans-serif;} 
-                        .card{background:#fff;padding:40px 30px;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,0.05);text-align:center;max-width:320px;width:90%;}
-                        .icon{width:64px;height:64px;background:#fee2e2;border-radius:50%;display:flex;justify-content:center;align-items:center;margin:0 auto 20px;color:#ef4444;font-size:30px;}
-                        h2{color:#1e293b;font-size:18px;margin:0 0 10px 0;} 
-                        p{font-size:14px;color:#64748b;line-height:1.5;margin-bottom:25px;}
-                        .timer{color:#2563eb;font-weight:600;background:#eff6ff;padding:10px;border-radius:8px;font-size:13px;}
+                        body{margin:0;background-color:#ffffff;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;font-family:'Prompt',sans-serif;color:#1e293b;} 
+                        .card{background:#ffffff;padding:35px 25px;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,0.08);text-align:center;max-width:380px;width:90%;border:1px solid #f1f5f9;}
+                        .icon{width:60px;height:60px;background:#fef2f2;border-radius:50%;display:flex;justify-content:center;align-items:center;margin:0 auto 20px;color:#ef4444;font-size:26px;}
+                        h2{color:#0f172a;font-size:18px;margin:0 0 12px 0;font-weight:600;} 
+                        p{font-size:13px;color:#64748b;line-height:1.6;margin-bottom:20px;text-align:left;}
+                        .timer{color:#2563eb;font-weight:600;background:#eff6ff;padding:12px;border-radius:10px;font-size:13px;text-align:center;}
                     </style>
                     </head><body>
                     <div class="card">
                         <div class="icon">⚠️</div>
                         <h2>รหัสแจ้งเตือน: CFR03</h2>
-                        <p>ระบบตรวจพบการเข้าใช้งานผ่านเบราว์เซอร์ภายนอก หรือระบบปฏิบัติการที่ไม่รองรับ<br><br><b>กรุณาใช้ช่องทางแอปพลิเคชัน LINE เท่านั้น</b></p>
-                        <div class="timer">กำลังพาท่านกลับสู่ LINE ในอีก <span id="sec">5</span> วินาที</div>
+                        <p>
+                            <b>กรุณาตรวจสอบเวอร์ชั่นของอุปกรณ์</b> ระบบรองรับ iOS 18 ขึ้นไป และ Android เวอร์ชั่นปัจจุบัน<br><br>
+                            กรุณาใช้งานผ่านระบบไลน์บริการเท่านั้น ไม่อนุญาตให้เปิดผ่านเครือข่ายผู้ใช้รายอื่น ป้องกันลิงค์ปลอมแปลงหรือผู้ไม่หวังดีต่อข้อมูลของท่าน
+                        </p>
+                        <div class="timer">กรุณารอสักครู่ ระบบกำลังพากลับไปยังไลน์บริการในอีก <span id="sec">5</span> วินาที</div>
                     </div>
                     <script>let c = 5; setInterval(() => { c--; document.getElementById('sec').innerText = c; if(c<=0) location.href="https://line.me/R/ti/p/@jpo3470r"; }, 1000);<\/script>
                     </body></html>
@@ -103,11 +106,31 @@
         </div>
     </div>
 
+    <!-- Image Lightbox Modal -->
+    <div id="lightbox-modal" class="modal" onclick="closeLightbox()">
+        <div class="relative max-w-lg w-full p-2 bg-white rounded-2xl shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
+            <button onclick="closeLightbox()" class="absolute top-4 right-4 bg-slate-800/70 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold z-10 hover:bg-slate-950">✕</button>
+            <img id="lightbox-img" src="" class="w-full max-h-[75vh] object-contain rounded-xl">
+        </div>
+    </div>
+
     <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative pb-20">
-        <!-- Header -->
-        <div class="bg-gradient-to-r from-blue-700 to-blue-600 text-white p-6 rounded-b-3xl shadow-md">
-            <h1 class="text-xl font-bold text-center tracking-wide">ระบบแบบฟอร์มขอคืนเงิน</h1>
-            <p class="text-xs text-center text-blue-100 mt-1 font-light">บริษัท สงวนสิทธิ์การให้บริการที่โปร่งใส</p>
+        <!-- Professional Header -->
+        <div class="bg-slate-900 text-white px-6 py-5 rounded-b-3xl shadow-xl border-b border-slate-800 relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl"></div>
+            <div class="relative z-10 flex items-center justify-between">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
+                        <span class="text-[11px] font-semibold uppercase tracking-wider text-blue-400">Secure Service Portal</span>
+                    </div>
+                    <h1 class="text-lg font-bold tracking-tight text-white">ระบบแบบฟอร์มขอคืนเงิน</h1>
+                    <p class="text-[12px] text-slate-400 font-light mt-0.5">บริษัท สงวนสิทธิ์การให้บริการที่โปร่งใสและปลอดภัย</p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-sm shadow-inner">
+                    🛡️
+                </div>
+            </div>
         </div>
 
         <!-- Segmented Control Tabs -->
@@ -164,12 +187,12 @@
                     <div class="p-4 bg-white border border-slate-200 shadow-sm rounded-xl">
                         <label class="block text-xs font-semibold text-slate-600 mb-2">อัปโหลด สำเนาบัตรประชาชน <span class="text-red-500">*</span></label>
                         <input type="file" id="f_idcard" accept="image/*" onchange="previewImage(this, 'preview_id')" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
-                        <img id="preview_id" class="img-preview" src="" alt="พรีวิวบัตรประชาชน">
+                        <img id="preview_id" class="img-preview" src="" alt="พรีวิวบัตรประชาชน" onclick="openLightbox(this.src)">
                     </div>
                     <div class="p-4 bg-white border border-slate-200 shadow-sm rounded-xl">
                         <label class="block text-xs font-semibold text-slate-600 mb-2">อัปโหลด สำเนาหน้าสมุดบัญชี <span class="text-red-500">*</span></label>
                         <input type="file" id="f_bankbook" accept="image/*" onchange="previewImage(this, 'preview_bank')" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
-                        <img id="preview_bank" class="img-preview" src="" alt="พรีวิวสมุดบัญชี">
+                        <img id="preview_bank" class="img-preview" src="" alt="พรีวิวสมุดบัญชี" onclick="openLightbox(this.src)">
                     </div>
 
                     <div class="flex gap-3 mt-6">
@@ -201,17 +224,31 @@
         <!-- TAB 2: STATUS -->
         <div id="tab-status" class="p-6 tab-content hidden bg-slate-50 min-h-screen">
             <h2 class="text-lg font-bold mb-4 text-slate-700 border-l-4 border-blue-600 pl-3">ตรวจสอบสถานะการทำรายการ</h2>
+            
+            <!-- Side-by-side Compact Search Form -->
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
-                <input type="text" id="s_user" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50 mb-3" placeholder="ระบุ Username ของท่าน">
-                <input type="tel" id="s_phone" maxlength="10" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50 mb-4" placeholder="เบอร์โทรศัพท์ 10 หลัก">
-                <button onclick="checkStatus()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-lg shadow-md active:scale-95 transition-transform text-sm">🔍 ค้นหาข้อมูล</button>
+                <div class="text-xs font-semibold text-slate-600 mb-3">กรอกข้อมูลเพื่อค้นหาประวัติการทำรายการ</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <input type="text" id="s_user" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50 m-0" placeholder="Username">
+                    </div>
+                    <div>
+                        <input type="tel" id="s_phone" maxlength="10" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50 m-0" placeholder="เบอร์โทรศัพท์ 10 หลัก">
+                    </div>
+                </div>
+                <div class="flex justify-start">
+                    <button onclick="checkStatus()" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-6 py-3 rounded-lg shadow-md active:scale-95 transition-transform text-sm flex items-center gap-2">
+                        <span>🔍</span> ค้นหาข้อมูล
+                    </button>
+                </div>
             </div>
+
             <div id="status-results" class="space-y-4">
                 <div class="text-center text-slate-400 text-sm mt-10">กรอกข้อมูลเพื่อค้นหาประวัติการทำรายการ<br>(ข้อมูลจะถูกลบออกจากระบบอัตโนมัติเมื่อครบ 60 วัน)</div>
             </div>
         </div>
 
-        <!-- TAB 3: POLICY (No PDF Export button) -->
+        <!-- TAB 3: POLICY (Clean Document View) -->
         <div id="tab-policy" class="p-6 tab-content hidden bg-slate-50 min-h-screen">
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-sm leading-relaxed" style="font-family: 'Prompt', sans-serif;">
                 <div class="text-center mb-6 border-b pb-5">
@@ -290,6 +327,16 @@
                 }
                 reader.readAsDataURL(input.files[0]);
             }
+        }
+
+        function openLightbox(url) {
+            if(!url) return;
+            document.getElementById('lightbox-img').src = url;
+            document.getElementById('lightbox-modal').classList.add('active');
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox-modal').classList.remove('active');
         }
 
         function nextStep(step) {
@@ -374,7 +421,7 @@
             }
         }
 
-        // คิวรี่ข้อมูลด่วนระดับ 0.1 วินาที โดยใช้ orderByChild (Indexed Search)
+        // Fast query (Indexed search by phone)
         function checkStatus() {
             const u = document.getElementById('s_user').value.trim();
             const p = document.getElementById('s_phone').value.trim();
@@ -383,7 +430,6 @@
             showLoader();
             const container = document.getElementById('status-results');
             
-            // ใช้คำสั่ง orderByChild หาเจาะจงเฉพาะเบอร์โทร เพื่อลดปริมาณโหลดข้อมูล
             db.ref('Refunds').orderByChild('phone').equalTo(p).once('value', snap => {
                 hideLoader();
                 container.innerHTML = '';
@@ -428,8 +474,8 @@
                                 <div class="mt-3 pt-3 border-t border-slate-100">
                                     <div class="text-xs text-slate-500 font-bold mb-2">เอกสารที่ส่งในระบบ</div>
                                     <div class="flex gap-2">
-                                        ${data.id_card_url ? `<img src="${data.id_card_url}" class="w-1/2 h-20 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-80 transition" onclick="window.open('${data.id_card_url}')">` : ''}
-                                        ${data.bank_book_url ? `<img src="${data.bank_book_url}" class="w-1/2 h-20 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-80 transition" onclick="window.open('${data.bank_book_url}')">` : ''}
+                                        ${data.id_card_url ? `<div class="w-1/2"><div class="text-[10px] text-slate-400 mb-1">สำเนาบัตรประชาชน</div><img src="${data.id_card_url}" class="w-full h-20 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-80 transition" onclick="openLightbox('${data.id_card_url}')"></div>` : ''}
+                                        ${data.bank_book_url ? `<div class="w-1/2"><div class="text-[10px] text-slate-400 mb-1">หน้าสมุดบัญชี</div><img src="${data.bank_book_url}" class="w-full h-20 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-80 transition" onclick="openLightbox('${data.bank_book_url}')"></div>` : ''}
                                     </div>
                                 </div>
 
@@ -437,10 +483,10 @@
                                 ${data.proof_url ? `
                                 <div class="mt-2 pt-3 border-t border-slate-100">
                                     <div class="text-xs text-green-600 font-bold mb-2 flex items-center gap-1"><span>✅</span> หลักฐานการโอนเงิน (จากเจ้าหน้าที่)</div>
-                                    <img src="${data.proof_url}" class="w-full max-h-48 object-contain rounded-lg border border-green-200 cursor-pointer hover:opacity-80 transition bg-green-50" onclick="window.open('${data.proof_url}')">
+                                    <img src="${data.proof_url}" class="w-full max-h-48 object-contain rounded-lg border border-green-200 cursor-pointer hover:opacity-90 transition bg-green-50/50" onclick="openLightbox('${data.proof_url}')">
                                 </div>` : ''}
                             </div>
-                        ` + itemsHTML; // Prepend เพื่อให้รายการล่าสุดขึ้นก่อน
+                        ` + itemsHTML;
                     }
                 });
 
