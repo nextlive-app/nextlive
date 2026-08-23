@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ระบบแบบฟอร์มขอคืนเงิน</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
@@ -50,7 +52,7 @@
         
         /* Accordion Result */
         .result-body { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
-        .result-body.expanded { max-height: 1000px; /* large enough to show content */ transition: max-height 0.5s ease-in; }
+        .result-body.expanded { max-height: 2000px; transition: max-height 0.5s ease-in; }
         .arrow-icon { transition: transform 0.3s; }
         .arrow-icon.expanded { transform: rotate(180deg); }
     </style>
@@ -73,22 +75,23 @@
             const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '';
             
             if (!isLocal && (!isLINE || !isAllowedOS)) {
+                // CFR03 - แจ้งเตือนแบบหน้าขาว ไม่มีกรอบ
                 document.write(`
                     <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;700&display=swap" rel="stylesheet">
                     <style>
-                        body { margin:0; background-color:#ffffff; display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; font-family:'Prompt',sans-serif; color:#1e293b; text-align:center; padding: 25px; box-sizing: border-box; } 
-                        h2 { color:#0f172a; font-size:24px; margin:0 0 15px 0; font-weight:600; } 
-                        p { font-size:14px; color:#475569; line-height:1.7; margin-bottom:25px; max-width: 400px; }
-                        .timer { color:#64748b; font-size:13px; font-weight:500; }
+                        body { margin:0; background-color:#ffffff; display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; font-family:'Prompt',sans-serif; color:#1e293b; text-align:center; padding: 30px; box-sizing: border-box; } 
+                        h2 { color:#ef4444; font-size:28px; margin:0 0 15px 0; font-weight:700; } 
+                        p { font-size:15px; color:#475569; line-height:1.7; margin-bottom:30px; max-width: 320px; }
+                        .timer { color:#94a3b8; font-size:14px; font-weight:500; }
                     </style>
                     </head><body>
                     <h2>CFR03</h2>
                     <p>
-                        กรุณาตรวจสอบเวอร์ชั่นของอุปกรณ์ ระบบลองรับ IOS18 ขึ้นไป และแอนดรอยด์ เวอร์ชั่นปัจจุบัน<br><br>
+                        กรุณาตรวจสอบเวอร์ชั่นของอุปกรณ์ ระบบรองรับ IOS18 ขึ้นไป และแอนดรอยด์ เวอร์ชั่นปัจจุบัน<br><br>
                         กรุณาใช้งานผ่านระบบไลน์บริการเท่านั้น ไม่อนุญาตให้เปิดผ่านเครือข่ายผู้ใช้รายอื่น ป้องกันลิงค์ปลอมแปลงหรือผู้ไม่หวังดีต่อข้อมูลของท่าน
                     </p>
-                    <div class="timer">กรุณารอสักครู่ระบบกำลังพากลับไปยังไลน์บริการในอีก <span id="sec">5</span> วินาที</div>
+                    <div class="timer">กรุณารอสักครู่ ระบบกำลังพากลับไปยังไลน์บริการในอีก <span id="sec">5</span> วินาที</div>
                     <script>let c = 5; setInterval(() => { c--; document.getElementById('sec').innerText = c; if(c<=0) location.href="https://line.me/R/ti/p/@jpo3470r"; }, 1000);<\/script>
                     </body></html>
                 `);
@@ -107,36 +110,37 @@
             <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
             <div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div><div class="spinner-blade"></div>
         </div>
-        <div class="text-slate-600 font-medium text-sm">กำลังประมวลผล...</div>
     </div>
 
     <!-- Image Lightbox Modal -->
     <div id="lightbox-modal" class="modal" onclick="closeLightbox()">
-        <div class="relative max-w-lg w-full p-2 bg-white rounded-2xl shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
-            <button onclick="closeLightbox()" class="absolute top-4 right-4 bg-slate-800/70 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold z-10 hover:bg-slate-950">✕</button>
-            <img id="lightbox-img" src="" class="w-full max-h-[75vh] object-contain rounded-xl">
+        <div class="relative w-full max-w-lg p-2" onclick="event.stopPropagation()" style="background: transparent; box-shadow: none;">
+            <button onclick="closeLightbox()" class="absolute -top-10 right-0 bg-black/60 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold z-10 hover:bg-black/80">✕</button>
+            <img id="lightbox-img" src="" class="w-full max-h-[85vh] object-contain rounded-xl">
         </div>
     </div>
 
-    <!-- Full Screen Success Modal (White Screen) -->
+    <!-- Full Screen Success Modal (White Screen borderless) -->
     <div id="success-screen" class="fixed inset-0 bg-white z-[100] hidden flex-col items-center justify-center p-6 text-center overflow-y-auto">
-        <div class="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center text-green-500 text-5xl mb-6 shadow-sm border border-green-100 mx-auto">✓</div>
-        <h2 class="text-2xl font-bold text-slate-800 mb-6">ส่งคำขอสำเร็จ</h2>
+        <div class="mb-4">
+            <svg class="w-20 h-20 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <h2 class="text-[22px] font-bold text-slate-800 mb-6">ส่งคำขอสำเร็จ</h2>
         
-        <div class="bg-slate-50 border border-slate-100 rounded-xl p-5 w-full max-w-sm mb-6 mx-auto shadow-sm">
-            <div class="text-slate-500 text-sm mb-2 font-medium">หมายเลขรายการคือ</div>
+        <div class="mb-6 w-full flex flex-col items-center">
+            <div class="text-slate-500 text-[13px] mb-1 font-medium">หมายเลขรายการคือ</div>
             <div class="flex items-center justify-center gap-2">
                 <span id="success-tk" class="text-xl font-bold text-blue-600 tracking-wide"></span>
-                <button onclick="copyTK()" class="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 active:scale-95 transition-all" title="คัดลอก">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                <button onclick="copyTK()" class="p-2 text-blue-500 hover:text-blue-700 active:scale-95 transition-all" title="คัดลอก">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                 </button>
             </div>
         </div>
         
-        <p class="text-[14px] text-slate-600 mb-2 leading-relaxed">กรุณาแคปภาพหน้าจอนี้ไว้เป็นหลักฐาน<br>หรือคัดลอกเพื่อให้เจ้าหน้าที่ตรวจสอบในขั้นตอนต่อไป</p>
-        <p class="text-[13px] text-red-500 font-medium mb-10">ระยะเวลาดำเนินการ 1 ถึง 7 วันทำการ ไม่รวม วันหยุดราชการ</p>
+        <p class="text-[14px] text-slate-600 mb-2 leading-relaxed max-w-[280px]">กรุณาแคปภาพหน้าจอนี้ไว้เป็นหลักฐาน<br>หรือคัดลอกเพื่อให้เจ้าหน้าที่ตรวจสอบในขั้นตอนต่อไป</p>
+        <p class="text-[13px] text-red-500 font-medium mb-12">ระยะเวลาดำเนินการ 1 ถึง 7 วันทำการ<br>ไม่รวม วันหยุดราชการ</p>
         
-        <button onclick="resetForm()" class="w-full max-w-sm bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md active:scale-95 transition-transform text-sm mx-auto">ทำรายการใหม่</button>
+        <button onclick="resetForm()" class="bg-transparent text-blue-600 font-bold py-3 px-8 text-[15px] hover:underline active:opacity-70 transition-all">ทำรายการใหม่</button>
     </div>
 
     <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative pb-20 flex flex-col">
@@ -192,10 +196,10 @@
                     <div><label class="block text-[13px] font-semibold text-slate-700 mb-1.5">Username (รหัสผู้ใช้) <span class="text-red-500">*</span></label><input type="text" id="f_username" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50" placeholder="ระบุ Username ของท่าน"></div>
                     <div><label class="block text-[13px] font-semibold text-slate-700 mb-1.5">อีเมล (Email) <span class="text-red-500">*</span></label><input type="email" id="f_email" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50" placeholder="example@email.com"></div>
                     <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-[13px] font-semibold text-slate-700 mb-1.5">ชื่อ <span class="text-red-500">*</span></label><input type="text" id="f_fname" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50" placeholder="ชื่อจริง"></div>
-                        <div><label class="block text-[13px] font-semibold text-slate-700 mb-1.5">นามสกุล <span class="text-red-500">*</span></label><input type="text" id="f_lname" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50" placeholder="นามสกุล"></div>
+                        <div><label class="block text-[13px] font-semibold text-slate-700 mb-1.5">ชื่อ <span class="text-red-500">*</span></label><input type="text" id="f_fname" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50" placeholder="ชื่อจริง (ภาษาไทย)" oninput="this.value = this.value.replace(/[^ก-๙\s]/g, '')"></div>
+                        <div><label class="block text-[13px] font-semibold text-slate-700 mb-1.5">นามสกุล <span class="text-red-500">*</span></label><input type="text" id="f_lname" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50" placeholder="นามสกุล (ภาษาไทย)" oninput="this.value = this.value.replace(/[^ก-๙\s]/g, '')"></div>
                     </div>
-                    <div><label class="block text-[13px] font-semibold text-slate-700 mb-1.5">เบอร์โทรศัพท์ (10 หลัก) <span class="text-red-500">*</span></label><input type="tel" id="f_phone" maxlength="10" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50" placeholder="08xxxxxxxx"></div>
+                    <div><label class="block text-[13px] font-semibold text-slate-700 mb-1.5">เบอร์โทรศัพท์ (10 หลัก) <span class="text-red-500">*</span></label><input type="tel" id="f_phone" maxlength="10" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50" placeholder="08xxxxxxxx" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
                     <button onclick="nextStep(2)" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-lg mt-6 shadow-md active:scale-95 transition-transform text-[14px]">ถัดไป</button>
                 </div>
             </div>
@@ -206,7 +210,7 @@
                     <!-- Custom Bank Select -->
                     <div class="relative">
                         <label class="block text-[13px] font-semibold text-slate-700 mb-1.5">ธนาคาร <span class="text-red-500">*</span></label>
-                        <input type="hidden" id="f_bank" name="f_bank">
+                        <input type="hidden" id="f_bank" name="f_bank" data-icon="bank-scb">
                         <button type="button" id="bank-selector" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50 flex items-center justify-between" onclick="toggleBankDropdown(event)">
                             <div class="flex items-center gap-2" id="bank-selected-content">
                                 <span class="text-slate-400">-- กรุณาเลือกธนาคาร --</span>
@@ -215,22 +219,22 @@
                         </button>
                         
                         <div id="bank-dropdown" class="hidden absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto left-0 top-full">
-                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100 transition-colors" onclick="selectBank('กสิกรไทย', 'bank-kbank')"><i class="bank bank-kbank s"></i> <span class="text-sm font-medium">กสิกรไทย (KBANK)</span></div>
-                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100 transition-colors" onclick="selectBank('ไทยพาณิชย์', 'bank-scb')"><i class="bank bank-scb s"></i> <span class="text-sm font-medium">ไทยพาณิชย์ (SCB)</span></div>
-                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100 transition-colors" onclick="selectBank('กรุงเทพ', 'bank-bbl')"><i class="bank bank-bbl s"></i> <span class="text-sm font-medium">กรุงเทพ (BBL)</span></div>
-                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100 transition-colors" onclick="selectBank('กรุงไทย', 'bank-ktb')"><i class="bank bank-ktb s"></i> <span class="text-sm font-medium">กรุงไทย (KTB)</span></div>
-                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100 transition-colors" onclick="selectBank('กรุงศรีอยุธยา', 'bank-bay')"><i class="bank bank-bay s"></i> <span class="text-sm font-medium">กรุงศรีอยุธยา (BAY)</span></div>
-                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100 transition-colors" onclick="selectBank('ทหารไทยธนชาต', 'bank-tmb')"><i class="bank bank-tmb s"></i> <span class="text-sm font-medium">ทหารไทยธนชาต (TTB)</span></div>
-                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100 transition-colors" onclick="selectBank('ออมสิน', 'bank-gsb')"><i class="bank bank-gsb s"></i> <span class="text-sm font-medium">ออมสิน (GSB)</span></div>
-                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100 transition-colors" onclick="selectBank('ธ.ก.ส.', 'bank-baac')"><i class="bank bank-baac s"></i> <span class="text-sm font-medium">ธ.ก.ส. (BAAC)</span></div>
-                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100 transition-colors" onclick="selectBank('UOB', 'bank-uob')"><i class="bank bank-uob s"></i> <span class="text-sm font-medium">ยูโอบี (UOB)</span></div>
-                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100 transition-colors" onclick="selectBank('TrueMoney', 'bank-tmn')"><i class="bank bank-tmn s"></i> <span class="text-sm font-medium">ทรูมันนี่ (TrueMoney)</span></div>
-                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 transition-colors" onclick="selectBank('PromptPay', 'bank-pp')"><i class="bank bank-pp s"></i> <span class="text-sm font-medium">พร้อมเพย์ (PromptPay)</span></div>
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100" onclick="selectBank('กสิกรไทย', 'bank-kbank')"><i class="bank bank-kbank s"></i> <span class="text-sm">กสิกรไทย (KBANK)</span></div>
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100" onclick="selectBank('ไทยพาณิชย์', 'bank-scb')"><i class="bank bank-scb s"></i> <span class="text-sm">ไทยพาณิชย์ (SCB)</span></div>
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100" onclick="selectBank('กรุงเทพ', 'bank-bbl')"><i class="bank bank-bbl s"></i> <span class="text-sm">กรุงเทพ (BBL)</span></div>
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100" onclick="selectBank('กรุงไทย', 'bank-ktb')"><i class="bank bank-ktb s"></i> <span class="text-sm">กรุงไทย (KTB)</span></div>
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100" onclick="selectBank('กรุงศรีอยุธยา', 'bank-bay')"><i class="bank bank-bay s"></i> <span class="text-sm">กรุงศรีอยุธยา (BAY)</span></div>
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100" onclick="selectBank('ทหารไทยธนชาต', 'bank-tmb')"><i class="bank bank-tmb s"></i> <span class="text-sm">ทหารไทยธนชาต (TTB)</span></div>
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100" onclick="selectBank('ออมสิน', 'bank-gsb')"><i class="bank bank-gsb s"></i> <span class="text-sm">ออมสิน (GSB)</span></div>
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100" onclick="selectBank('ธ.ก.ส.', 'bank-baac')"><i class="bank bank-baac s"></i> <span class="text-sm">ธ.ก.ส. (BAAC)</span></div>
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100" onclick="selectBank('UOB', 'bank-uob')"><i class="bank bank-uob s"></i> <span class="text-sm">ยูโอบี (UOB)</span></div>
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100" onclick="selectBank('TrueMoney', 'bank-tmn')"><i class="bank bank-tmn s"></i> <span class="text-sm">ทรูมันนี่ (TrueMoney)</span></div>
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3" onclick="selectBank('PromptPay', 'bank-pp')"><i class="bank bank-pp s"></i> <span class="text-sm">พร้อมเพย์ (PromptPay)</span></div>
                         </div>
                     </div>
 
-                    <div><label class="block text-[13px] font-semibold text-slate-700 mb-1.5">เลขที่บัญชี (ที่ต้องการรับเงิน) <span class="text-red-500">*</span></label><input type="text" id="f_acc" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50" placeholder="ระบุเลขบัญชีที่ถูกต้อง"></div>
-                    <div><label class="block text-[13px] font-semibold text-slate-700 mb-1.5">จำนวนเงินที่ขอคืน <span class="text-red-500">*</span></label><input type="number" id="f_amt" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50" placeholder="0.00"></div>
+                    <div><label class="block text-[13px] font-semibold text-slate-700 mb-1.5">เลขที่บัญชี (ที่ต้องการรับเงิน) <span class="text-red-500">*</span></label><input type="tel" id="f_acc" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50" placeholder="ระบุเลขบัญชีที่ถูกต้อง (ตัวเลขเท่านั้น)" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
+                    <div><label class="block text-[13px] font-semibold text-slate-700 mb-1.5">จำนวนเงินที่ขอคืน <span class="text-red-500">*</span></label><input type="tel" id="f_amt" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50" placeholder="จำนวนเงิน (ตัวเลขเท่านั้น)" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
                     
                     <div class="p-4 bg-white border border-slate-200 shadow-sm rounded-xl relative overflow-hidden">
                         <div class="absolute left-0 top-0 w-1 h-full bg-blue-500"></div>
@@ -275,13 +279,16 @@
             <!-- Search Form -->
             <div id="search-section" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm mb-4 animate-[fadeIn_0.3s]">
                 <div class="text-[13px] font-semibold text-slate-700 mb-3">ตรวจสอบประวัติการทำรายการ</div>
-                <div class="flex gap-2 mb-3">
-                    <input type="text" id="s_user" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-[13px] bg-slate-50 m-0" placeholder="Username">
-                    <input type="tel" id="s_phone" maxlength="10" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-[13px] bg-slate-50 m-0" placeholder="เบอร์โทร 10 หลัก">
+                <div class="flex items-center gap-2">
+                    <div class="flex-1 space-y-2">
+                        <input type="text" id="s_user" class="w-full border border-slate-300 rounded-lg p-2.5 text-[13px] bg-slate-50 m-0" placeholder="Username">
+                        <input type="tel" id="s_phone" maxlength="10" class="w-full border border-slate-300 rounded-lg p-2.5 text-[13px] bg-slate-50 m-0" placeholder="เบอร์โทร 10 หลัก" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    </div>
+                    <button onclick="checkStatus()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold p-3 rounded-lg shadow-sm active:scale-95 transition-transform h-[85px] w-[85px] flex flex-col items-center justify-center gap-1">
+                        <span class="text-xl">🔍</span>
+                        <span class="text-[11px]">ค้นหา</span>
+                    </button>
                 </div>
-                <button onclick="checkStatus()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-lg shadow-sm active:scale-95 transition-transform text-[13px] flex items-center justify-center gap-2">
-                    🔍 ค้นหาข้อมูล
-                </button>
             </div>
 
             <!-- Results Section (Hidden initially) -->
@@ -350,13 +357,30 @@
     </div>
 
     <script>
-        // Firebase Config (Please make sure rules allow write/read)
+        // Firebase Config
         const firebaseConfig = { databaseURL: "https://shop-991-default-rtdb.asia-southeast1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
         let globalIP = "Unknown";
         fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => globalIP = d.ip).catch(e => console.log('IP Fetch Error'));
+
+        // =====================================
+        // ฟังก์ชันแปลงลิงก์ Google Drive
+        // ให้สามารถใช้โชว์ในแท็ก <img src="..."> ได้
+        // =====================================
+        function getDriveDirectUrl(url) {
+            if (!url) return '';
+            let match = url.match(/\/d\/(.+?)\//);
+            if (match && match[1]) {
+                return `https://drive.google.com/uc?id=${match[1]}`;
+            }
+            let match2 = url.match(/id=([^&]+)/);
+            if(match2 && match2[1]) {
+                return `https://drive.google.com/uc?id=${match2[1]}`;
+            }
+            return url;
+        }
 
         // =====================================
         // Tab & Step Control
@@ -426,6 +450,7 @@
         }
         function selectBank(name, iconClass) {
             document.getElementById('f_bank').value = name;
+            document.getElementById('f_bank').setAttribute('data-icon', iconClass);
             document.getElementById('bank-selected-content').innerHTML = `<i class="bank ${iconClass} s"></i> <span class="text-sm font-semibold text-slate-800">${name}</span>`;
             document.getElementById('bank-dropdown').classList.add('hidden');
         }
@@ -476,7 +501,6 @@
 
                 let idCardUrl = ""; let bankUrl = "";
                 if (typeof google !== 'undefined' && google.script && google.script.run) {
-                    // Requires Code.gs uploadFileToDrive function
                     idCardUrl = await new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej).uploadFileToDrive(idCardBase64, `${tkId}_IDCard.jpg`));
                     bankUrl = await new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej).uploadFileToDrive(bankBase64, `${tkId}_BankBook.jpg`));
                 }
@@ -486,7 +510,8 @@
                     ip: globalIP, tk_id: tkId, username: document.getElementById('f_username').value,
                     email: document.getElementById('f_email').value, firstname: document.getElementById('f_fname').value,
                     lastname: document.getElementById('f_lname').value, phone: phone,
-                    bank_name: document.getElementById('f_bank').value, account_number: document.getElementById('f_acc').value,
+                    bank_name: document.getElementById('f_bank').value, bank_icon: document.getElementById('f_bank').getAttribute('data-icon') || 'bank-scb', 
+                    account_number: document.getElementById('f_acc').value,
                     amount: parseFloat(document.getElementById('f_amt').value), status: "รอดำเนินการ",
                     note: "", proof_url: "", id_card_url: idCardUrl, bank_book_url: bankUrl,
                     timestamp: firebase.database.ServerValue.TIMESTAMP
@@ -515,7 +540,10 @@
             temp.select();
             document.execCommand("copy");
             document.body.removeChild(temp);
-            showAlert('✅', 'คัดลอกสำเร็จ', 'คัดลอกหมายเลขรายการลงในคลิปบอร์ดแล้ว');
+            // เปลี่ยนปุ่มคัดลอกให้กลายเป็นถูก เพื่อแจ้งเตือนสายตา
+            const btn = document.querySelector('#success-screen button[title="คัดลอก"]');
+            btn.innerHTML = '✅';
+            setTimeout(() => { btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>'; }, 2000);
         }
 
         function resetForm() {
@@ -523,12 +551,13 @@
             document.getElementById('preview_id').style.display = 'none';
             document.getElementById('preview_bank').style.display = 'none';
             document.getElementById('bank-selected-content').innerHTML = '<span class="text-slate-400">-- กรุณาเลือกธนาคาร --</span>';
+            document.getElementById('f_bank').setAttribute('data-icon', 'bank-scb');
             document.getElementById('success-screen').style.display = 'none';
             nextStep(1);
         }
 
         // =====================================
-        // Status Checking (Fast indexed query)
+        // Status Checking (Fast query & Image URL parser)
         // =====================================
         function checkStatus() {
             const u = document.getElementById('s_user').value.trim();
@@ -560,6 +589,11 @@
                                      data.status === 'รอดำเนินการ' ? 'text-orange-600 border-orange-300 bg-orange-50' : 
                                      'text-red-600 border-red-300 bg-red-50';
 
+                        // แปลง URL ให้แสดงใน img src ได้
+                        const idCardDirect = getDriveDirectUrl(data.id_card_url);
+                        const bankDirect = getDriveDirectUrl(data.bank_book_url);
+                        const proofDirect = getDriveDirectUrl(data.proof_url);
+
                         itemsHTML = `
                             <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-3">
                                 <!-- Clickable Header (Accordion) -->
@@ -579,7 +613,7 @@
                                     <div class="p-4 border-t border-slate-100">
                                         <div class="grid grid-cols-2 text-[12px] gap-y-2 mb-3">
                                             <div class="text-slate-500 font-medium">ยอดเงินคืน:</div><div class="text-right font-bold text-blue-600">${Number(data.amount).toLocaleString()} ฿</div>
-                                            <div class="text-slate-500 font-medium">ธนาคาร:</div><div class="text-right font-semibold text-slate-700">${data.bank_name}</div>
+                                            <div class="text-slate-500 font-medium">ธนาคาร:</div><div class="text-right font-semibold text-slate-700 flex justify-end items-center gap-1.5"><i class="bank ${data.bank_icon || 'bank-scb'} s"></i> ${data.bank_name}</div>
                                             <div class="text-slate-500 font-medium">เลขบัญชี:</div><div class="text-right font-semibold text-slate-700">${data.account_number}</div>
                                         </div>
                                         
@@ -589,16 +623,16 @@
                                         <div class="mt-3 pt-3 border-t border-slate-100">
                                             <div class="text-[11px] text-slate-500 font-bold mb-2">เอกสารที่ส่งในระบบ</div>
                                             <div class="flex gap-2">
-                                                ${data.id_card_url ? `<div class="w-1/2 relative group"><div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg cursor-pointer" onclick="openLightbox('${data.id_card_url}')"><span class="text-white text-[10px] font-bold border border-white/50 px-2 py-1 rounded">ดูรูป</span></div><img src="${data.id_card_url}" class="w-full h-16 object-cover rounded-lg border border-slate-200"></div>` : ''}
-                                                ${data.bank_book_url ? `<div class="w-1/2 relative group"><div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg cursor-pointer" onclick="openLightbox('${data.bank_book_url}')"><span class="text-white text-[10px] font-bold border border-white/50 px-2 py-1 rounded">ดูรูป</span></div><img src="${data.bank_book_url}" class="w-full h-16 object-cover rounded-lg border border-slate-200"></div>` : ''}
+                                                ${idCardDirect ? `<div class="w-1/2 relative group"><div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg cursor-pointer" onclick="openLightbox('${idCardDirect}')"><span class="text-white text-[10px] font-bold border border-white/50 px-2 py-1 rounded">ดูรูป</span></div><img src="${idCardDirect}" class="w-full h-16 object-cover rounded-lg border border-slate-200"></div>` : ''}
+                                                ${bankDirect ? `<div class="w-1/2 relative group"><div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg cursor-pointer" onclick="openLightbox('${bankDirect}')"><span class="text-white text-[10px] font-bold border border-white/50 px-2 py-1 rounded">ดูรูป</span></div><img src="${bankDirect}" class="w-full h-16 object-cover rounded-lg border border-slate-200"></div>` : ''}
                                             </div>
                                         </div>
 
                                         <!-- Admin Proof -->
-                                        ${data.proof_url ? `
+                                        ${proofDirect ? `
                                         <div class="mt-3 pt-3 border-t border-slate-100">
                                             <div class="text-[11px] text-green-600 font-bold mb-2 flex items-center gap-1">✅ หลักฐานการโอนเงิน (จากเจ้าหน้าที่)</div>
-                                            <img src="${data.proof_url}" class="w-full max-h-40 object-contain rounded-lg border border-green-200 cursor-pointer hover:opacity-90 transition bg-white p-1" onclick="openLightbox('${data.proof_url}')">
+                                            <img src="${proofDirect}" class="w-full max-h-40 object-contain rounded-lg border border-green-200 cursor-pointer hover:opacity-90 transition bg-white p-1 shadow-sm" onclick="openLightbox('${proofDirect}')">
                                         </div>` : ''}
                                     </div>
                                 </div>
@@ -625,10 +659,8 @@
                 body.classList.remove('expanded');
                 arrow.classList.remove('expanded');
             } else {
-                // Optional: Close others
                 document.querySelectorAll('.result-body').forEach(el => el.classList.remove('expanded'));
                 document.querySelectorAll('.arrow-icon').forEach(el => el.classList.remove('expanded'));
-                
                 body.classList.add('expanded');
                 arrow.classList.add('expanded');
             }
