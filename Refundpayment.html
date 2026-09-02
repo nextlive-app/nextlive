@@ -136,7 +136,7 @@
         <p class="text-[14px] text-slate-600 mb-2 leading-relaxed max-w-[280px]">กรุณาแคปภาพหน้าจอนี้ไว้เป็นหลักฐาน<br>หรือคัดลอกเพื่อให้เจ้าหน้าที่ตรวจสอบในขั้นตอนต่อไป</p>
         <p class="text-[13px] text-red-500 font-medium mb-12">ระยะเวลาดำเนินการ 1 ถึง 7 วันทำการ<br>ไม่รวม วันหยุดราชการ</p>
         
-        <button onclick="resetForm()" class="bg-transparent text-blue-600 font-bold py-3 px-8 text-[15px] hover:underline active:opacity-70 transition-all">ทำรายการใหม่</button>
+        <button onclick="resetForm()" class="bg-transparent text-blue-600 font-bold py-3 px-8 text-[15px] hover:underline active:opacity-70 transition-all">กลับสู่หน้าหลัก</button>
     </div>
 
     <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative pb-20 flex flex-col">
@@ -269,7 +269,7 @@
 
         <!-- TAB 2: STATUS -->
         <div id="tab-status" class="p-5 tab-content hidden flex-1 relative bg-slate-50">
-            <!-- Search Form - ปรับปุ่มให้กว้างและสวยงาม -->
+            <!-- Search Form -->
             <div id="search-section" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-4 animate-[fadeIn_0.3s]">
                 <div class="text-[14px] font-bold text-slate-700 mb-4 text-center">ตรวจสอบประวัติการทำรายการ</div>
                 <div class="space-y-3">
@@ -356,12 +356,11 @@
         fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => globalIP = d.ip).catch(e => console.log('IP Fetch Error'));
 
         // =====================================
-        // แก้ไขฟังก์ชันแปลงลิงก์ Google Drive เพื่อให้โชว์รูปได้
-        // โดยใช้ Thumbnail API ของ Google แทน uc?id=
+        // ฟังก์ชันแปลงลิงก์ Google Drive
+        // ใช้ lh3.googleusercontent.com ทะลุบล็อค 100%
         // =====================================
         function getDriveDirectUrl(url) {
             if (!url) return '';
-            // ดึง ID ไฟล์ออกมาจากลิงก์ 
             let match = url.match(/\/d\/(.+?)\//);
             let id = null;
             if (match && match[1]) {
@@ -372,10 +371,8 @@
                     id = match2[1];
                 }
             }
-            
-            // ใช้ thumbnail url เพื่อหลบการบล็อคข้ามโดเมนของ Google
             if (id) {
-                return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+                return `https://lh3.googleusercontent.com/d/${id}`;
             }
             return url;
         }
@@ -433,9 +430,6 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // =====================================
-        // Bank Dropdown Logic
-        // =====================================
         function toggleBankDropdown(e) {
             e.stopPropagation();
             document.getElementById('bank-dropdown').classList.toggle('hidden');
@@ -452,9 +446,6 @@
             document.getElementById('bank-dropdown').classList.add('hidden');
         }
 
-        // =====================================
-        // File Processing & Lightbox
-        // =====================================
         function previewImage(input, previewId) {
             if (input.files && input.files[0]) {
                 var reader = new FileReader();
@@ -479,15 +470,45 @@
         });
 
         // =====================================
-        // Form Submission
+        // Form Submission + 24 Hour Cooldown
         // =====================================
         async function submitForm() {
             showLoader();
             try {
+                const phone = document.getElementById('f_phone').value.trim();
+                const username = document.getElementById('f_username').value.trim();
+                
+                // --- ตรวจสอบ Cooldown 24 ชั่วโมง ---
+                const snapCheck = await db.ref('Refunds').once('value');
+                let isLocked = false;
+                let timeRemainingStr = "";
+                const nowMs = Date.now();
+                const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+                if (snapCheck.exists()) {
+                    snapCheck.forEach(child => {
+                        const data = child.val();
+                        if ((data.phone === phone || data.username.toLowerCase() === username.toLowerCase()) && data.timestamp) {
+                            const diff = nowMs - data.timestamp;
+                            if (diff < DAY_IN_MS) {
+                                isLocked = true;
+                                const hoursLeft = Math.ceil((DAY_IN_MS - diff) / (60 * 60 * 1000));
+                                timeRemainingStr = `${hoursLeft} ชั่วโมง`;
+                            }
+                        }
+                    });
+                }
+
+                if (isLocked) {
+                    hideLoader();
+                    showAlert('⏳', 'ระงับการทำรายการชั่วคราว', `ท่านได้ส่งคำขอไปแล้ว ระบบป้องกันการส่งข้อมูลซ้ำซ้อน<br>กรุณารออีกประมาณ <b>${timeRemainingStr}</b> เพื่อทำรายการใหม่`);
+                    return;
+                }
+                // --- จบการตรวจสอบ ---
+
                 const idCardBase64 = await toBase64(document.getElementById('f_idcard').files[0]);
                 const bankBase64 = await toBase64(document.getElementById('f_bankbook').files[0]);
 
-                const phone = document.getElementById('f_phone').value;
                 const now = new Date();
                 const yy = String(now.getFullYear()).slice(-2);
                 const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -504,7 +525,7 @@
 
                 const payload = {
                     date: `${dd}/${mm}/${now.getFullYear()}`, time: `${HH}:${MM}:${String(now.getSeconds()).padStart(2,'0')}`,
-                    ip: globalIP, tk_id: tkId, username: document.getElementById('f_username').value,
+                    ip: globalIP, tk_id: tkId, username: username,
                     email: document.getElementById('f_email').value, firstname: document.getElementById('f_fname').value,
                     lastname: document.getElementById('f_lname').value, phone: phone,
                     bank_name: document.getElementById('f_bank').value, bank_icon: document.getElementById('f_bank').getAttribute('data-icon') || 'bank-scb', 
@@ -549,21 +570,22 @@
             document.getElementById('bank-selected-content').innerHTML = '<span class="text-slate-400">-- กรุณาเลือกธนาคาร --</span>';
             document.getElementById('f_bank').setAttribute('data-icon', 'bank-scb');
             document.getElementById('success-screen').style.display = 'none';
-            nextStep(1);
+            switchTab('tab-status');
         }
 
         // =====================================
-        // Status Checking
+        // Status Checking (แบบไม่พึ่ง Index ป้องกันการค้นหาไม่เจอ)
         // =====================================
         function checkStatus() {
-            const u = document.getElementById('s_user').value.trim();
+            const u = document.getElementById('s_user').value.trim().toLowerCase();
             const p = document.getElementById('s_phone').value.trim();
             if(!u || !p) return showAlert('⚠️', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอก Username และเบอร์โทรศัพท์ เพื่อค้นหา');
 
             showLoader();
             const container = document.getElementById('status-results');
             
-            db.ref('Refunds').orderByChild('phone').equalTo(p).once('value', snap => {
+            // ดึงข้อมูลทั้งหมดมาคัดกรองฝั่ง Client เพื่อแก้ปัญหา Firebase หาข้อมูลไม่เจอจาก Index
+            db.ref('Refunds').once('value', snap => {
                 hideLoader();
                 container.innerHTML = '';
                 let found = false;
@@ -571,69 +593,79 @@
                 const maxAge = 60 * 24 * 60 * 60 * 1000;
                 let itemsHTML = '';
 
-                snap.forEach(child => {
-                    const data = child.val();
-                    const key = child.key;
+                if(snap.exists()) {
+                    snap.forEach(child => {
+                        const data = child.val();
+                        const key = child.key;
 
-                    if (data.timestamp && (now - data.timestamp) > maxAge) {
-                        db.ref('Refunds/' + key).remove(); return;
-                    }
+                        if (data.timestamp && (now - data.timestamp) > maxAge) {
+                            db.ref('Refunds/' + key).remove(); return;
+                        }
 
-                    if (data.username.toLowerCase() === u.toLowerCase()) {
-                        found = true;
-                        let sColor = data.status === 'อนุมัติ' ? 'text-green-700 border-green-300 bg-green-50' : 
-                                     data.status === 'รอดำเนินการ' ? 'text-orange-600 border-orange-300 bg-orange-50' : 
-                                     'text-red-600 border-red-300 bg-red-50';
+                        // กรองข้อมูลให้ตรงกับที่ค้นหา
+                        if (data.phone === p && data.username.toLowerCase() === u) {
+                            found = true;
+                            let sColor = data.status === 'อนุมัติ' ? 'text-green-700 border-green-300 bg-green-50' : 
+                                         data.status === 'รอดำเนินการ' ? 'text-orange-600 border-orange-300 bg-orange-50' : 
+                                         'text-red-600 border-red-300 bg-red-50';
 
-                        // แปลง URL ให้แสดงใน img src ได้ (เรียกใช้ฟังก์ชันใหม่)
-                        const idCardDirect = getDriveDirectUrl(data.id_card_url);
-                        const bankDirect = getDriveDirectUrl(data.bank_book_url);
-                        const proofDirect = getDriveDirectUrl(data.proof_url);
+                            const idCardDirect = getDriveDirectUrl(data.id_card_url);
+                            const bankDirect = getDriveDirectUrl(data.bank_book_url);
+                            const proofDirect = getDriveDirectUrl(data.proof_url);
 
-                        itemsHTML = `
-                            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-3">
-                                <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors" onclick="toggleResult('${key}')">
-                                    <div>
-                                        <div class="text-[10px] text-slate-400 font-medium mb-0.5">${data.date} | ${data.time}</div>
-                                        <div class="text-[13px] font-bold text-slate-800">${data.tk_id}</div>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <div class="px-2.5 py-1 rounded-md text-[10px] font-bold border ${sColor}">${data.status}</div>
-                                        <div class="text-slate-300 text-xs arrow-icon" id="arrow-${key}">▼</div>
-                                    </div>
-                                </div>
-                                
-                                <div id="body-${key}" class="result-body bg-slate-50/50">
-                                    <div class="p-4 border-t border-slate-100">
-                                        <div class="grid grid-cols-2 text-[12px] gap-y-2 mb-3">
-                                            <div class="text-slate-500 font-medium">ยอดเงินคืน:</div><div class="text-right font-bold text-blue-600">${Number(data.amount).toLocaleString()} ฿</div>
-                                            <div class="text-slate-500 font-medium">ธนาคาร:</div><div class="text-right font-semibold text-slate-700 flex justify-end items-center gap-1.5"><i class="bank ${data.bank_icon || 'bank-scb'} s"></i> ${data.bank_name}</div>
-                                            <div class="text-slate-500 font-medium">เลขบัญชี:</div><div class="text-right font-semibold text-slate-700">${data.account_number}</div>
+                            itemsHTML = `
+                                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-3">
+                                    <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors" onclick="toggleResult('${key}')">
+                                        <div>
+                                            <div class="text-[10px] text-slate-400 font-medium mb-0.5">${data.date} | ${data.time}</div>
+                                            <div class="text-[13px] font-bold text-slate-800">${data.tk_id}</div>
                                         </div>
-                                        
-                                        ${data.note ? `<div class="mt-2 p-3 bg-red-50/70 rounded-lg text-[12px] text-red-600 border border-red-100/50 leading-relaxed"><span class="font-bold">หมายเหตุเจ้าหน้าที่:</span><br>${data.note}</div>` : ''}
-                                        
-                                        <!-- User Docs -->
-                                        <div class="mt-3 pt-3 border-t border-slate-100">
-                                            <div class="text-[11px] text-slate-500 font-bold mb-2">เอกสารที่ส่งในระบบ</div>
-                                            <div class="flex gap-2">
-                                                ${idCardDirect ? `<div class="w-1/2 relative group"><div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg cursor-pointer" onclick="openLightbox('${idCardDirect}')"><span class="text-white text-[10px] font-bold border border-white/50 px-2 py-1 rounded">ดูรูป</span></div><img src="${idCardDirect}" class="w-full h-16 object-cover rounded-lg border border-slate-200"></div>` : ''}
-                                                ${bankDirect ? `<div class="w-1/2 relative group"><div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg cursor-pointer" onclick="openLightbox('${bankDirect}')"><span class="text-white text-[10px] font-bold border border-white/50 px-2 py-1 rounded">ดูรูป</span></div><img src="${bankDirect}" class="w-full h-16 object-cover rounded-lg border border-slate-200"></div>` : ''}
+                                        <div class="flex items-center gap-3">
+                                            <div class="px-2.5 py-1 rounded-md text-[10px] font-bold border ${sColor}">${data.status}</div>
+                                            <div class="text-slate-300 text-xs arrow-icon" id="arrow-${key}">▼</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="body-${key}" class="result-body bg-slate-50/50">
+                                        <div class="p-4 border-t border-slate-100">
+                                            <div class="grid grid-cols-2 text-[12px] gap-y-2 mb-3">
+                                                <div class="text-slate-500 font-medium">ยอดเงินคืน:</div><div class="text-right font-bold text-blue-600">${Number(data.amount).toLocaleString()} ฿</div>
+                                                <div class="text-slate-500 font-medium">ธนาคาร:</div><div class="text-right font-semibold text-slate-700 flex justify-end items-center gap-1.5"><i class="bank ${data.bank_icon || 'bank-scb'} s"></i> ${data.bank_name}</div>
+                                                <div class="text-slate-500 font-medium">เลขบัญชี:</div><div class="text-right font-semibold text-slate-700">${data.account_number}</div>
+                                            </div>
+                                            
+                                            ${data.note ? `<div class="mt-2 p-3 bg-red-50/70 rounded-lg text-[12px] text-red-600 border border-red-100/50 leading-relaxed"><span class="font-bold">หมายเหตุเจ้าหน้าที่:</span><br>${data.note}</div>` : ''}
+                                            
+                                            <!-- User Docs UI ใหม่ 3 ช่องชัดเจน -->
+                                            <div class="mt-3 pt-3 border-t border-slate-100">
+                                                <div class="text-[11px] text-slate-500 font-bold mb-2">เอกสารแนบ (คลิกเพื่อดูรูปใหญ่)</div>
+                                                <div class="grid grid-cols-3 gap-2">
+                                                    ${idCardDirect ? `
+                                                    <div class="relative group cursor-pointer" onclick="openLightbox('${idCardDirect}')">
+                                                        <div class="absolute top-1 left-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded shadow">1.บัตร ปชช.</div>
+                                                        <img src="${idCardDirect}" class="w-full h-20 object-cover rounded-lg border border-slate-200 bg-white">
+                                                    </div>` : '<div class="h-20 flex items-center justify-center border border-dashed border-slate-300 rounded-lg bg-slate-100 text-[9px] text-slate-400">ไม่พบไฟล์</div>'}
+                                                    
+                                                    ${bankDirect ? `
+                                                    <div class="relative group cursor-pointer" onclick="openLightbox('${bankDirect}')">
+                                                        <div class="absolute top-1 left-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded shadow">2.สมุดบัญชี</div>
+                                                        <img src="${bankDirect}" class="w-full h-20 object-cover rounded-lg border border-slate-200 bg-white">
+                                                    </div>` : '<div class="h-20 flex items-center justify-center border border-dashed border-slate-300 rounded-lg bg-slate-100 text-[9px] text-slate-400">ไม่พบไฟล์</div>'}
+                                                    
+                                                    ${proofDirect ? `
+                                                    <div class="relative group cursor-pointer border-2 border-green-400 rounded-lg overflow-hidden" onclick="openLightbox('${proofDirect}')">
+                                                        <div class="absolute top-1 left-1 bg-green-500 text-white text-[9px] px-1.5 py-0.5 rounded shadow z-10">3.สลิปแอดมิน</div>
+                                                        <img src="${proofDirect}" class="w-full h-full object-cover bg-white">
+                                                    </div>` : '<div class="h-20 flex flex-col items-center justify-center border border-dashed border-slate-300 rounded-lg bg-slate-50 text-[9px] text-slate-400 text-center">3.สลิปแอดมิน<br>(ยังไม่แนบ)</div>'}
+                                                </div>
                                             </div>
                                         </div>
-
-                                        <!-- Admin Proof -->
-                                        ${proofDirect ? `
-                                        <div class="mt-3 pt-3 border-t border-slate-100">
-                                            <div class="text-[11px] text-green-600 font-bold mb-2 flex items-center gap-1">✅ หลักฐานการโอนเงิน (จากเจ้าหน้าที่)</div>
-                                            <img src="${proofDirect}" class="w-full max-h-40 object-contain rounded-lg border border-green-200 cursor-pointer hover:opacity-90 transition bg-white p-1 shadow-sm" onclick="openLightbox('${proofDirect}')">
-                                        </div>` : ''}
                                     </div>
                                 </div>
-                            </div>
-                        ` + itemsHTML; // Prepend
-                    }
-                });
+                            ` + itemsHTML; // Prepend (เอาอันใหม่ไว้บนสุด)
+                        }
+                    });
+                }
 
                 if (found) {
                     document.getElementById('search-section').classList.add('hidden');
@@ -641,7 +673,7 @@
                     document.getElementById('status-empty').classList.add('hidden');
                     container.innerHTML = itemsHTML;
                 } else {
-                    showAlert('⚠️', 'ไม่พบข้อมูล', 'ไม่พบประวัติการทำรายการ หรือข้อมูลอาจถูกลบไปแล้ว');
+                    showAlert('⚠️', 'ไม่พบข้อมูล', 'ไม่พบประวัติการทำรายการในระบบ กรุณาตรวจสอบข้อมูลอีกครั้ง');
                 }
             });
         }
@@ -683,3 +715,4 @@
     </script>
 </body>
 </html>
+```eof
