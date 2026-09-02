@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Admin System Dashboard</title>
     
-    <!-- Bank Icons CSS (สำหรับโชว์โลโก้ธนาคาร) -->
+    <!-- Bank Icons CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/allaboutitappscript/fontbank/banks.min.css">
     
     <!-- Firebase SDK -->
@@ -58,7 +58,7 @@
         .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .glass-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid rgba(240,246,252,0.1); border-radius: 16px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
         
-        /* Tables (Responsive wrapper) */
+        /* Tables */
         .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0; margin: 0; border-radius: 16px; }
         table { width: 100%; border-collapse: collapse; min-width: 600px; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(240,246,252,0.1); }
@@ -244,7 +244,6 @@
             <!-- 1. Dashboard -->
             <div id="dashboard" class="page active">
                 <div class="header-actions"><h2>ภาพรวมระบบ</h2></div>
-                <!-- Refund Stats -->
                 <div class="grid-4">
                     <div class="glass-card" style="padding: 15px;">
                         <label>คำขอคืนเงินทั้งหมด</label>
@@ -263,7 +262,6 @@
                         <div style="font-size:32px; font-weight:bold; color:var(--danger); margin-top:5px;" id="stat-r-cancel">0</div>
                     </div>
                 </div>
-                <!-- Line Users Stats -->
                 <div class="grid-3">
                     <div class="glass-card">
                         <label>จำนวนเพื่อนปัจจุบัน</label>
@@ -322,7 +320,7 @@
                 </div>
             </div>
 
-            <!-- 5. Users Database -->
+            <!-- 5. Users -->
             <div id="users" class="page">
                 <div class="header-actions"><h2>ฐานข้อมูลผู้ใช้งาน</h2></div>
                 <div class="glass-card table-responsive">
@@ -350,7 +348,6 @@
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.onkeydown = e => { if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74))) return false; };
 
-        // Firebase Config
         const firebaseConfig = { databaseURL: "https://shop-991-default-rtdb.asia-southeast1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -366,18 +363,23 @@
         ];
 
         // =====================================
-        // ฟังก์ชันแปลงลิงก์ Google Drive
-        // ให้สามารถใช้โชว์ในแท็ก <img src="..."> ได้
+        // แก้ไขฟังก์ชันแปลงลิงก์ Google Drive
+        // ให้ใช้งาน Thumbnail API ได้เหมือน User
         // =====================================
         function getDriveDirectUrl(url) {
             if (!url) return '';
             let match = url.match(/\/d\/(.+?)\//);
+            let id = null;
             if (match && match[1]) {
-                return `https://drive.google.com/uc?id=${match[1]}`;
+                id = match[1];
+            } else {
+                let match2 = url.match(/id=([^&]+)/);
+                if(match2 && match2[1]) {
+                    id = match2[1];
+                }
             }
-            let match2 = url.match(/id=([^&]+)/);
-            if(match2 && match2[1]) {
-                return `https://drive.google.com/uc?id=${match2[1]}`;
+            if (id) {
+                return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
             }
             return url;
         }
@@ -401,7 +403,7 @@
             document.querySelectorAll('.menu-item').forEach(menu => menu.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             event.currentTarget.classList.add('active');
-            if (window.innerWidth <= 768) toggleSidebar(); // Auto-close on mobile
+            if (window.innerWidth <= 768) toggleSidebar(); 
         }
 
         function customAlert(icon, title, text) {
@@ -604,7 +606,6 @@
         function loadAllData() {
             document.getElementById('set-user').value = adminAuth.user; document.getElementById('set-email').value = adminAuth.email; document.getElementById('set-pass').value = adminAuth.pass;
 
-            // Load Users Data
             db.ref('Users').on('value', snap => {
                 globalUsers = snap.val() || {}; 
                 let html = ''; let friends = 0; let blocks = 0; let latestUsersHtml = '';
@@ -642,7 +643,6 @@
                 document.getElementById('stat-latest').innerHTML = latestUsersHtml || '<div style="color:var(--text-sub);">ยังไม่มีข้อมูลผู้ใช้ล่าสุด</div>';
             });
 
-            // Load Refunds Data
             db.ref('Refunds').on('value', snap => {
                 globalRefunds = snap.val() || {};
                 let html = ''; let tot=0, pen=0, suc=0, can=0;
@@ -662,7 +662,6 @@
                     else if(r.status === 'อนุมัติ') suc++;
                     else can++;
 
-                    // ใช้ getDriveDirectUrl เพื่อเปิดให้สามารถใช้งานเป็น src ใน img ได้เลย
                     const idCardDirect = getDriveDirectUrl(r.id_card_url);
                     const bankBookDirect = getDriveDirectUrl(r.bank_book_url);
                     const proofDirect = getDriveDirectUrl(r.proof_url);
@@ -733,14 +732,12 @@
                 document.getElementById('stat-r-cancel').innerText = can;
             });
 
-            // Reusable Quick Reply Tag renderer
             const renderQRTags = (d) => {
                 let tags = '';
                 for(let i=1; i<=5; i++) if(d[`QR${i}`]) tags += `<span class="btn-sm" style="background:rgba(88,166,255,0.1); border:1px solid rgba(88,166,255,0.3); color:var(--primary); display:inline-block; margin-top:4px;">${d[`QR${i}`]}</span> `;
                 return tags || '<span style="color:rgba(255,255,255,0.2)">-</span>';
             };
 
-            // Load QnA Data
             db.ref('QnA').on('value', snap => {
                 globalQna = snap.val() || {}; let html = '';
                 snap.forEach(child => {
@@ -759,7 +756,6 @@
                 document.getElementById('tb-qna').innerHTML = html || '<tr><td colspan="5" style="text-align:center; padding:20px;">ยังไม่มีข้อมูลถามตอบ</td></tr>';
             });
 
-            // Load Greetings Data
             db.ref('Greetings').on('value', snap => {
                 globalGreetings = snap.val() || {}; let html = '';
                 snap.forEach(child => {
