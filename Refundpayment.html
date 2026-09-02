@@ -75,7 +75,6 @@
             const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '';
             
             if (!isLocal && (!isLINE || !isAllowedOS)) {
-                // CFR03 - แจ้งเตือนแบบหน้าขาว ไม่มีกรอบ
                 document.write(`
                     <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;700&display=swap" rel="stylesheet">
@@ -87,10 +86,7 @@
                     </style>
                     </head><body>
                     <h2>CFR03</h2>
-                    <p>
-                        กรุณาตรวจสอบเวอร์ชั่นของอุปกรณ์ ระบบรองรับ IOS18 ขึ้นไป และแอนดรอยด์ เวอร์ชั่นปัจจุบัน<br><br>
-                        กรุณาใช้งานผ่านระบบไลน์บริการเท่านั้น ไม่อนุญาตให้เปิดผ่านเครือข่ายผู้ใช้รายอื่น ป้องกันลิงค์ปลอมแปลงหรือผู้ไม่หวังดีต่อข้อมูลของท่าน
-                    </p>
+                    <p>กรุณาตรวจสอบเวอร์ชั่นของอุปกรณ์ ระบบรองรับ IOS18 ขึ้นไป และแอนดรอยด์ เวอร์ชั่นปัจจุบัน<br><br>กรุณาใช้งานผ่านระบบไลน์บริการเท่านั้น ไม่อนุญาตให้เปิดผ่านเครือข่ายผู้ใช้รายอื่น</p>
                     <div class="timer">กรุณารอสักครู่ ระบบกำลังพากลับไปยังไลน์บริการในอีก <span id="sec">5</span> วินาที</div>
                     <script>let c = 5; setInterval(() => { c--; document.getElementById('sec').innerText = c; if(c<=0) location.href="https://line.me/R/ti/p/@jpo3470r"; }, 1000);<\/script>
                     </body></html>
@@ -120,7 +116,7 @@
         </div>
     </div>
 
-    <!-- Full Screen Success Modal (White Screen borderless) -->
+    <!-- Full Screen Success Modal -->
     <div id="success-screen" class="fixed inset-0 bg-white z-[100] hidden flex-col items-center justify-center p-6 text-center overflow-y-auto">
         <div class="mb-4">
             <svg class="w-20 h-20 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -144,7 +140,7 @@
     </div>
 
     <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative pb-20 flex flex-col">
-        <!-- Professional Header -->
+        <!-- Header -->
         <div class="bg-slate-900 text-white px-6 py-6 shadow-md relative overflow-hidden">
             <div class="absolute -right-10 -top-10 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl"></div>
             <div class="relative z-10 flex items-center gap-4">
@@ -159,7 +155,7 @@
             </div>
         </div>
 
-        <!-- Segmented Control Tabs -->
+        <!-- Tabs -->
         <div class="bg-white p-3 shadow-sm sticky top-0 z-10 border-b border-slate-100">
             <div class="flex bg-slate-100/80 p-1 rounded-xl">
                 <button onclick="switchTab('tab-form')" id="btn-form" class="flex-1 py-2.5 text-[13px] font-bold rounded-lg bg-white text-blue-600 shadow-sm transition-all border border-slate-200/50">แบบฟอร์ม</button>
@@ -178,19 +174,17 @@
                     <div id="step-1-dot" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 step-active bg-white">1</div>
                     <span class="text-[10px] font-medium text-blue-600" id="step-1-text">ข้อมูลผู้ใช้</span>
                 </div>
-                
                 <div class="flex flex-col items-center gap-2 bg-white px-2">
                     <div id="step-2-dot" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 step-inactive bg-white">2</div>
                     <span class="text-[10px] font-medium text-slate-400" id="step-2-text">ข้อมูลบัญชี</span>
                 </div>
-                
                 <div class="flex flex-col items-center gap-2 bg-white px-2">
                     <div id="step-3-dot" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 step-inactive bg-white">3</div>
                     <span class="text-[10px] font-medium text-slate-400" id="step-3-text">ตรวจสอบ</span>
                 </div>
             </div>
 
-            <!-- Step 1: Personal Info -->
+            <!-- Step 1 -->
             <div id="step-1-content" class="animate-[fadeIn_0.3s]">
                 <div class="space-y-4">
                     <div><label class="block text-[13px] font-semibold text-slate-700 mb-1.5">Username (รหัสผู้ใช้) <span class="text-red-500">*</span></label><input type="text" id="f_username" class="w-full border border-slate-300 rounded-lg p-3 text-sm bg-slate-50" placeholder="ระบุ Username ของท่าน"></div>
@@ -204,10 +198,9 @@
                 </div>
             </div>
 
-            <!-- Step 2: Bank Info -->
+            <!-- Step 2 -->
             <div id="step-2-content" class="hidden animate-[fadeIn_0.3s]">
                 <div class="space-y-4">
-                    <!-- Custom Bank Select -->
                     <div class="relative">
                         <label class="block text-[13px] font-semibold text-slate-700 mb-1.5">ธนาคาร <span class="text-red-500">*</span></label>
                         <input type="hidden" id="f_bank" name="f_bank" data-icon="bank-scb">
@@ -256,7 +249,7 @@
                 </div>
             </div>
 
-            <!-- Step 3: Confirmation -->
+            <!-- Step 3 -->
             <div id="step-3-content" class="hidden animate-[fadeIn_0.3s]">
                 <div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-sm space-y-3 mb-6 shadow-sm">
                     <div class="flex justify-between border-b pb-2"><span class="font-medium text-slate-500">Username</span> <span id="c_user" class="font-bold text-slate-800"></span></div>
@@ -276,22 +269,20 @@
 
         <!-- TAB 2: STATUS -->
         <div id="tab-status" class="p-5 tab-content hidden flex-1 relative bg-slate-50">
-            <!-- Search Form -->
-            <div id="search-section" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm mb-4 animate-[fadeIn_0.3s]">
-                <div class="text-[13px] font-semibold text-slate-700 mb-3">ตรวจสอบประวัติการทำรายการ</div>
-                <div class="flex items-center gap-2">
-                    <div class="flex-1 space-y-2">
-                        <input type="text" id="s_user" class="w-full border border-slate-300 rounded-lg p-2.5 text-[13px] bg-slate-50 m-0" placeholder="Username">
-                        <input type="tel" id="s_phone" maxlength="10" class="w-full border border-slate-300 rounded-lg p-2.5 text-[13px] bg-slate-50 m-0" placeholder="เบอร์โทร 10 หลัก" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                    </div>
-                    <button onclick="checkStatus()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold p-3 rounded-lg shadow-sm active:scale-95 transition-transform h-[85px] w-[85px] flex flex-col items-center justify-center gap-1">
-                        <span class="text-xl">🔍</span>
-                        <span class="text-[11px]">ค้นหา</span>
+            <!-- Search Form - ปรับปุ่มให้กว้างและสวยงาม -->
+            <div id="search-section" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-4 animate-[fadeIn_0.3s]">
+                <div class="text-[14px] font-bold text-slate-700 mb-4 text-center">ตรวจสอบประวัติการทำรายการ</div>
+                <div class="space-y-3">
+                    <input type="text" id="s_user" class="w-full border border-slate-300 rounded-lg p-3 text-[14px] bg-slate-50 m-0" placeholder="ระบุ Username ของท่าน">
+                    <input type="tel" id="s_phone" maxlength="10" class="w-full border border-slate-300 rounded-lg p-3 text-[14px] bg-slate-50 m-0" placeholder="เบอร์โทร 10 หลัก" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    <button onclick="checkStatus()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold p-3.5 rounded-lg shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2 mt-2">
+                        <span class="text-lg">🔍</span>
+                        <span class="text-[14px]">ค้นหาข้อมูล</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Results Section (Hidden initially) -->
+            <!-- Results Section -->
             <div id="results-section" class="hidden animate-[fadeIn_0.3s]">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-[14px] font-bold text-slate-700 border-l-4 border-blue-600 pl-2">รายการที่พบ</h2>
@@ -346,7 +337,7 @@
         </div>
     </div>
 
-    <!-- Alert Modal (Small info) -->
+    <!-- Alert Modal -->
     <div id="modal-alert" class="modal">
         <div class="bg-white rounded-2xl p-6 max-w-xs w-full text-center shadow-2xl relative border border-slate-100">
             <div id="modal-icon" class="text-4xl mb-3 p-2 bg-slate-50 rounded-full inline-block">⚠️</div>
@@ -357,7 +348,6 @@
     </div>
 
     <script>
-        // Firebase Config
         const firebaseConfig = { databaseURL: "https://shop-991-default-rtdb.asia-southeast1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -366,18 +356,26 @@
         fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => globalIP = d.ip).catch(e => console.log('IP Fetch Error'));
 
         // =====================================
-        // ฟังก์ชันแปลงลิงก์ Google Drive
-        // ให้สามารถใช้โชว์ในแท็ก <img src="..."> ได้
+        // แก้ไขฟังก์ชันแปลงลิงก์ Google Drive เพื่อให้โชว์รูปได้
+        // โดยใช้ Thumbnail API ของ Google แทน uc?id=
         // =====================================
         function getDriveDirectUrl(url) {
             if (!url) return '';
+            // ดึง ID ไฟล์ออกมาจากลิงก์ 
             let match = url.match(/\/d\/(.+?)\//);
+            let id = null;
             if (match && match[1]) {
-                return `https://drive.google.com/uc?id=${match[1]}`;
+                id = match[1];
+            } else {
+                let match2 = url.match(/id=([^&]+)/);
+                if(match2 && match2[1]) {
+                    id = match2[1];
+                }
             }
-            let match2 = url.match(/id=([^&]+)/);
-            if(match2 && match2[1]) {
-                return `https://drive.google.com/uc?id=${match2[1]}`;
+            
+            // ใช้ thumbnail url เพื่อหลบการบล็อคข้ามโดเมนของ Google
+            if (id) {
+                return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
             }
             return url;
         }
@@ -410,14 +408,13 @@
                 document.getElementById('c_user').innerText = document.getElementById('f_username').value;
                 document.getElementById('c_name').innerText = `${document.getElementById('f_fname').value} ${document.getElementById('f_lname').value}`;
                 document.getElementById('c_phone').innerText = document.getElementById('f_phone').value;
-                document.getElementById('c_bank').innerHTML = document.getElementById('bank-selected-content').innerHTML; // Copy HTML for icon
+                document.getElementById('c_bank').innerHTML = document.getElementById('bank-selected-content').innerHTML; 
                 document.getElementById('c_acc').innerText = document.getElementById('f_acc').value;
                 document.getElementById('c_amt').innerText = Number(document.getElementById('f_amt').value).toLocaleString() + ' ฿';
             }
 
             [1, 2, 3].forEach(s => {
                 document.getElementById(`step-${s}-content`).classList.add('hidden');
-                
                 const dot = document.getElementById(`step-${s}-dot`);
                 const text = document.getElementById(`step-${s}-text`);
                 
@@ -540,7 +537,6 @@
             temp.select();
             document.execCommand("copy");
             document.body.removeChild(temp);
-            // เปลี่ยนปุ่มคัดลอกให้กลายเป็นถูก เพื่อแจ้งเตือนสายตา
             const btn = document.querySelector('#success-screen button[title="คัดลอก"]');
             btn.innerHTML = '✅';
             setTimeout(() => { btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>'; }, 2000);
@@ -557,7 +553,7 @@
         }
 
         // =====================================
-        // Status Checking (Fast query & Image URL parser)
+        // Status Checking
         // =====================================
         function checkStatus() {
             const u = document.getElementById('s_user').value.trim();
@@ -589,14 +585,13 @@
                                      data.status === 'รอดำเนินการ' ? 'text-orange-600 border-orange-300 bg-orange-50' : 
                                      'text-red-600 border-red-300 bg-red-50';
 
-                        // แปลง URL ให้แสดงใน img src ได้
+                        // แปลง URL ให้แสดงใน img src ได้ (เรียกใช้ฟังก์ชันใหม่)
                         const idCardDirect = getDriveDirectUrl(data.id_card_url);
                         const bankDirect = getDriveDirectUrl(data.bank_book_url);
                         const proofDirect = getDriveDirectUrl(data.proof_url);
 
                         itemsHTML = `
                             <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-3">
-                                <!-- Clickable Header (Accordion) -->
                                 <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors" onclick="toggleResult('${key}')">
                                     <div>
                                         <div class="text-[10px] text-slate-400 font-medium mb-0.5">${data.date} | ${data.time}</div>
@@ -608,7 +603,6 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Hidden Body Details -->
                                 <div id="body-${key}" class="result-body bg-slate-50/50">
                                     <div class="p-4 border-t border-slate-100">
                                         <div class="grid grid-cols-2 text-[12px] gap-y-2 mb-3">
